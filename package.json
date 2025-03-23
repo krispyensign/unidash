@@ -22,6 +22,7 @@
     "clean": "rimraf bin/ dist/ node_modules/ logs/ package-lock.json"
   },
   "dependencies": {
+    "file-system-cache": "^2.4.7",
     "graphql-request": "^7.1.2",
     "pyodide": "^0.27.4",
     "typescript": "^5.8.2"

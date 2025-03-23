@@ -2,15 +2,13 @@ import pandas as pd
 import numpy as np
 
 
-def signal(
-    ha_df: pd.DataFrame, wma_period: int = 20
-) -> pd.DataFrame:
+def signal(ha_df: pd.DataFrame, wma_period: int = 20) -> pd.DataFrame:
     # Generate signals
     """
     Generate trading signals based on Heikin-Ashi candlesticks and a Weighted Moving Average (WMA).
 
     This function calculates buy and sell signals by comparing the closing prices of Heikin-Ashi
-    candlesticks to the WMA. A signal of 1 indicates a buy signal. The position is determined by 
+    candlesticks to the WMA. A signal of 1 indicates a buy signal. The position is determined by
     the difference between consecutive signals, where a position of 1 indicates a buy signal and
     -1 indicates a sell signal, and 0 indicates no action.
 
@@ -36,11 +34,10 @@ def signal(
         raise ValueError("ha_df cannot be empty")
     if "ha_open" not in ha_df.columns:
         raise ValueError("ha_df must contain a 'ha_open' column")
-    if 'ha_close' not in ha_df.columns:
+    if "ha_close" not in ha_df.columns:
         raise ValueError("ha_df must contain a 'ha_close' column")
     if "WMA" not in ha_df.columns:
         raise ValueError("ha_df must contain a 'WMA' column")
-
 
     ha_df["ha_mid"] = (ha_df["ha_open"] + ha_df["ha_close"]) / 2
 

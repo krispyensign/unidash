@@ -4,6 +4,7 @@ import { GraphQLClient, gql } from 'graphql-request';
 import { apiKey } from './private.json'
 import fs from 'fs';
 import path from 'path';
+import { Cache } from 'file-system-cache'
 
 // Define the GraphQL endpoint for the Uniswap subgraph v3
 const endpoint = `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1`
@@ -34,7 +35,8 @@ type DataFrame = {
     resample(freq: string): DataFrame
     ohlc(): DataFrame
     set_index(column: string): DataFrame
-    head(): DataFrame
+    head(count?: number): DataFrame
+    tail(count?: number): DataFrame
     to_json(): string
 }
 
@@ -42,7 +44,7 @@ type resampleFunction = (dataIn: DataFrame, timeFrame: string, token0IsBase: boo
 type heikenFunction = (dataIn: DataFrame) => DataFrame
 type wmaFunction = (ha_df: DataFrame, wma_period: number) => DataFrame
 type signalFunction = (ha_df: DataFrame, wma_period: number) => DataFrame
-type portfolioFunction = (dataIn: DataFrame, capital0: number, positions: number) => DataFrame
+type portfolioFunction = (dataIn: DataFrame, capital0: number) => DataFrame
 let resamplefn: resampleFunction
 let heikenfn: heikenFunction
 let wmafn: wmaFunction
@@ -64,10 +66,19 @@ let pyodide: any
  *          containing the timestamp, amount0, and amount1 for each swap.
  */
 async function GetSwaps(token0: string, token1: string): Promise<TransformedSwap[]> {
+    const cache = new Cache({
+        ttl: 360,              
+    });
+    let outData: TransformedSwap[] = await cache.get("foo");
+    if (outData) {
+        return outData
+    }
+
+    outData = []
+
     // Create a GraphQL client
     const client = new GraphQLClient(endpoint)
 
-    let outData: TransformedSwap[] = []
 
     // call endpoint 20 times for each of the 20 days
     const now = Math.floor(new Date().getTime() / 1000)
@@ -105,6 +116,8 @@ async function GetSwaps(token0: string, token1: string): Promise<TransformedSwap
 
     }
 
+    await cache.set("foo", outData)
+
     console.log(outData.length)
     return outData
 }
@@ -139,7 +152,7 @@ async function loadPy(): Promise<void> {
     portfoliofn = await loadCode(pyodide, 'portfolio')
 }
 
-async function loadStuff() {
+async function generateSignals() {
     const data = await GetSwaps("0x4200000000000000000000000000000000000006", "0x570b1533F6dAa82814B25B62B5c7c4c55eB83947")
     const jsonData = JSON.stringify(data)
     
@@ -153,8 +166,17 @@ async function loadStuff() {
 
     df_ha = wmafn(df_ha, 20)
 
+    df_ha = signalfn(df_ha, 20)
+    // console.log(df_ha.tail().to_json())
+
+    const portfolio = portfoliofn(df_ha, 480869000)
+    console.log(portfolio.tail(1).to_csv())
 
 }
 
-loadPy()
-loadStuff()
+async function main() {
+    await loadPy()
+    await generateSignals()
+}
+
+main()
