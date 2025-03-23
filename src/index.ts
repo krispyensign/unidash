@@ -43,7 +43,7 @@ type DataFrame = {
 type resampleFunction = (dataIn: DataFrame, timeFrame: string, token0IsBase: boolean) => DataFrame
 type heikenFunction = (dataIn: DataFrame) => DataFrame
 type wmaFunction = (ha_df: DataFrame, wma_period: number) => DataFrame
-type signalFunction = (ha_df: DataFrame, wma_period: number) => DataFrame
+type signalFunction = (ha_df: DataFrame, wma_period: number, inverted: boolean, point: string) => DataFrame
 type portfolioFunction = (dataIn: DataFrame, capital0: number) => DataFrame
 let resamplefn: resampleFunction
 let heikenfn: heikenFunction
@@ -152,26 +152,76 @@ async function loadPy(): Promise<void> {
     portfoliofn = await loadCode(pyodide, 'portfolio')
 }
 
-async function generateSignals() {
+type TestSet = {
+    isBase: boolean,
+    initValue: number,
+    inverted: boolean,
+    point: string,
+}
+
+async function generateSignals(ts: TestSet) {
     const data = await GetSwaps("0x4200000000000000000000000000000000000006", "0x570b1533F6dAa82814B25B62B5c7c4c55eB83947")
     const jsonData = JSON.stringify(data)
     
     const pd = pyodide.pyimport("pandas")
     const df: DataFrame = pd.read_json(jsonData).set_index('timestamp')
 
-    const df_ohlc = resamplefn(df, '5Min', true)
-
+    const df_ohlc = resamplefn(df, '5Min', ts.isBase)
     let df_ha = heikenfn(df_ohlc)
     df_ha = wmafn(df_ha, 20)
-    df_ha = signalfn(df_ha, 20)
+    df_ha = signalfn(df_ha, 20, ts.inverted, ts.point)
 
-    const portfolio = portfoliofn(df_ha, 480869000)
+    const portfolio = portfoliofn(df_ha, ts.initValue)
     console.log(portfolio.tail(1).to_csv())
 }
 
+
 async function main() {
     await loadPy()
-    await generateSignals()
+
+    const testSets: TestSet[] = [
+        {isBase: true, initValue: 480869000, inverted: false, point: "ha_open"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "ha_high"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "ha_low"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "ha_close"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "ha_mid"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "open"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "high"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "low"},
+        {isBase: true, initValue: 480869000, inverted: false, point: "close"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "ha_open"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "ha_high"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "ha_low"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "ha_close"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "ha_mid"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "open"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "high"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "low"},
+        {isBase: true, initValue: 480869000, inverted: true, point: "close"},
+        {isBase: false, initValue: .08, inverted: false, point: "ha_open"},
+        {isBase: false, initValue: .08, inverted: false, point: "ha_high"},
+        {isBase: false, initValue: .08, inverted: false, point: "ha_low"},
+        {isBase: false, initValue: .08, inverted: false, point: "ha_close"},
+        {isBase: false, initValue: .08, inverted: false, point: "ha_mid"},
+        {isBase: false, initValue: .08, inverted: false, point: "open"},
+        {isBase: false, initValue: .08, inverted: false, point: "high"},
+        {isBase: false, initValue: .08, inverted: false, point: "low"},
+        {isBase: false, initValue: .08, inverted: false, point: "close"},
+        {isBase: false, initValue: .08, inverted: true, point: "ha_open"},
+        {isBase: false, initValue: .08, inverted: true, point: "ha_high"},
+        {isBase: false, initValue: .08, inverted: true, point: "ha_low"},
+        {isBase: false, initValue: .08, inverted: true, point: "ha_close"},
+        {isBase: false, initValue: .08, inverted: true, point: "ha_mid"},
+        {isBase: false, initValue: .08, inverted: true, point: "open"},
+        {isBase: false, initValue: .08, inverted: true, point: "high"},
+        {isBase: false, initValue: .08, inverted: true, point: "low"},
+        {isBase: false, initValue: .08, inverted: true, point: "close"},
+    ]
+
+    for (const ts of testSets) {
+        console.log(ts)
+        await generateSignals(ts)
+    }
 }
 
 main()

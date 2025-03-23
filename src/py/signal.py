@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def signal(ha_df: pd.DataFrame, wma_period: int = 20) -> pd.DataFrame:
+def signal(ha_df: pd.DataFrame, wma_period: int = 20, inverted: bool = False, point: str = "ha_open") -> pd.DataFrame:
     # Generate signals
     """
     Generate trading signals based on Heikin-Ashi candlesticks and a Weighted Moving Average (WMA).
@@ -45,9 +45,14 @@ def signal(ha_df: pd.DataFrame, wma_period: int = 20) -> pd.DataFrame:
     ha_df["signal"] = 0
 
     # if the close price is greater than the WMA, it indicates a buy signal
-    ha_df["signal"][wma_period:] = np.where(
-        ha_df["ha_mid"][wma_period:] > ha_df["WMA"][wma_period:], 1, 0
-    )
+    if inverted:
+        ha_df["signal"][wma_period:] = np.where(
+            ha_df[point][wma_period:] < ha_df["WMA"][wma_period:], 1, 0 
+        )
+    else:
+        ha_df["signal"][wma_period:] = np.where(
+            ha_df[point][wma_period:] > ha_df["WMA"][wma_period:], 1, 0
+        )
 
     # set the first signal to 0 to indicate no action
     ha_df.loc[0, "position"] = 0
