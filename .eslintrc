@@ -1,0 +1,57 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "extends": ["prettier", "plugin:@typescript-eslint/recommended"],
+  "plugins": ["prettier"],
+
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "rules": {
+    "prettier/prettier": "error",
+
+    "block-scoped-var": "error",
+    "eqeqeq": "error",
+    "eol-last": "error",
+    "max-len": ["error", { "code": 100 }],
+    "prefer-arrow-callback": "error",
+    "quotes": ["warn", "single", { "avoidEscape": true }],
+    "require-atomic-updates": "off",
+    "semi": "off",
+    "prefer-const": "off",
+
+    "no-trailing-spaces": "error",
+    "no-var": "error",
+    "no-loss-of-precision": "off",
+    "no-dupe-class-members": "off",
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "describe",
+        "property": "only"
+      },
+      {
+        "object": "it",
+        "property": "only"
+      }
+    ],
+
+    "@typescript-eslint/array-type": ["error", { "default": "array" }],
+    "@typescript-eslint/ban-types": "off",
+    "@typescript-eslint/camelcase": "off",
+    "@typescript-eslint/explicit-function-return-type": "error",
+    "@typescript-eslint/explicit-module-boundary-types": "error",
+    "@typescript-eslint/member-delimiter-style": "off",
+    "@typescript-eslint/prefer-optional-chain": "error",
+
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-warning-comments": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-use-before-define": "error",
+    "@typescript-eslint/no-confusing-non-null-assertion": "error",
+    "@typescript-eslint/no-extra-non-null-assertion": "error",
+    "@typescript-eslint/no-inferrable-types": "error",
+    "@typescript-eslint/no-loss-of-precision": "error"
+  }
+}

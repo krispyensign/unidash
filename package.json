@@ -1,0 +1,32 @@
+{
+  "name": "unidash",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=12.11.0"
+  },
+  "description": "Poorly named repo to perform signal generation and backtesting using WMA and Heiken Ashi. Targetting Uniswap initially.",
+  "homepage": "https://github.com/krispyensign/unidash#readme",
+  "bugs": {
+    "url": "https://github.com/krispyensign/unidash/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krispyensign/unidash.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc && cp -fr src/py dist/",
+    "fix": "npx prettier -w src/** && npx eslint --fix src/",
+    "clean": "rimraf bin/ dist/ node_modules/ logs/ package-lock.json"
+  },
+  "dependencies": {
+    "graphql-request": "^7.1.2",
+    "pyodide": "^0.27.4",
+    "typescript": "^5.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.11"
+  }
+}

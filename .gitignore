@@ -1,0 +1,17 @@
+node_modules
+logs/
+dist/
+node_modules/
+private/
+bin/
+bundle/
+temp/
+certs/
+
+*.pem
+*.swp
+.DS_Store
+private.json
+.fake
+.ruff_cache/
+.venv/
