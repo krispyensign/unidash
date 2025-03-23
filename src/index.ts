@@ -159,19 +159,14 @@ async function generateSignals() {
     const pd = pyodide.pyimport("pandas")
     const df: DataFrame = pd.read_json(jsonData).set_index('timestamp')
 
-
     const df_ohlc = resamplefn(df, '5Min', true)
 
     let df_ha = heikenfn(df_ohlc)
-
     df_ha = wmafn(df_ha, 20)
-
     df_ha = signalfn(df_ha, 20)
-    // console.log(df_ha.tail().to_json())
 
     const portfolio = portfoliofn(df_ha, 480869000)
     console.log(portfolio.tail(1).to_csv())
-
 }
 
 async function main() {
