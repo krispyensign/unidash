@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def portfolio(data: pd.DataFrame, initial: float = 1) -> pd.DataFrame:
+def portfolio(data: pd.DataFrame, initial: float = 1) -> tuple[pd.DataFrame, float]:
     """
     Calculate the portfolio value based on a DataFrame of OHLC data.
 
@@ -17,8 +17,6 @@ def portfolio(data: pd.DataFrame, initial: float = 1) -> pd.DataFrame:
     data['cumsum']=data['position'].cumsum()
 
     # count number of buy signals in position
-    print("buy count", data["position"].value_counts()[1])
-    print("sell count", data["position"].value_counts()[-1])
 
     portfolio=pd.DataFrame()
     ratio = initial/data.loc[0, 'open']
@@ -27,12 +25,11 @@ def portfolio(data: pd.DataFrame, initial: float = 1) -> pd.DataFrame:
     portfolio['cash']=initial-(data['position']*data['close']*ratio).cumsum()
     portfolio['total asset']=portfolio['holdings']+portfolio['cash']
     portfolio['profit']=portfolio['total asset']-initial
-    portfolio['return']=portfolio['total asset'].pct_change()
-    portfolio['position']=data['position']
     portfolio['timestamp']=data['timestamp']
+    portfolio['buy count']=data["position"].value_counts()[1]
+    portfolio['sell count']=data["position"].value_counts()[-1]
     portfolio.set_index('timestamp',inplace=True)
-    return portfolio
-
+    return [portfolio, portfolio['profit'].iloc[-1]/initial]
 
 
 portfolio

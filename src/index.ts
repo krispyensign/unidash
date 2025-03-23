@@ -44,7 +44,7 @@ type resampleFunction = (dataIn: DataFrame, timeFrame: string, token0IsBase: boo
 type heikenFunction = (dataIn: DataFrame) => DataFrame
 type wmaFunction = (ha_df: DataFrame, wma_period: number) => DataFrame
 type signalFunction = (ha_df: DataFrame, wma_period: number, inverted: boolean, point: string) => DataFrame
-type portfolioFunction = (dataIn: DataFrame, capital0: number) => DataFrame
+type portfolioFunction = (dataIn: DataFrame, capital0: number) => [DataFrame, number]
 let resamplefn: resampleFunction
 let heikenfn: heikenFunction
 let wmafn: wmaFunction
@@ -159,7 +159,7 @@ type TestSet = {
     point: string,
 }
 
-async function generateSignals(ts: TestSet) {
+async function generateSignals(ts: TestSet): Promise<[DataFrame, number]> {
     const data = await GetSwaps("0x4200000000000000000000000000000000000006", "0x570b1533F6dAa82814B25B62B5c7c4c55eB83947")
     const jsonData = JSON.stringify(data)
     
@@ -171,8 +171,9 @@ async function generateSignals(ts: TestSet) {
     df_ha = wmafn(df_ha, 20)
     df_ha = signalfn(df_ha, 20, ts.inverted, ts.point)
 
-    const portfolio = portfoliofn(df_ha, ts.initValue)
+    const [portfolio, profit] = portfoliofn(df_ha, ts.initValue)
     console.log(portfolio.tail(1).to_csv())
+    return [portfolio, profit]
 }
 
 
@@ -218,9 +219,25 @@ async function main() {
         {isBase: false, initValue: .08, inverted: true, point: "close"},
     ]
 
+    let profit_results: [TestSet, DataFrame, number][] = []
+    let loss_results: [TestSet, DataFrame, number][] = []
+
     for (const ts of testSets) {
         console.log(ts)
-        await generateSignals(ts)
+        let [result, profit] = await generateSignals(ts)
+        if (profit > 0) {
+            profit_results.push([ts, result, profit])
+        } else {
+            loss_results.push([ts, result, profit])
+        }
+    }
+
+    console.log("=============================================")
+    for (const [ts, result, profit] of profit_results) {
+        console.log(JSON.stringify(ts))
+        console.log(result.tail(1).to_csv())
+        console.log(profit)
+        console.log("=============================================")
     }
 }
 
