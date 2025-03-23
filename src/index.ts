@@ -59,6 +59,10 @@ let pyodide: any
  * This function queries the Uniswap subgraph to retrieve swap data for the
  * specified token pair over the last 20 days. It makes 20 separate requests,
  * each fetching swaps for one day, and aggregates the results.
+ * 
+ * TODO: Cache each day individually so that it doesn't have to fetch the full
+ * X number of days every time.  This way this can be configurable to download
+ * any number of days.
  *
  * @param token0 The address of the first token in the pair.
  * @param token1 The address of the second token in the pair.
@@ -66,19 +70,22 @@ let pyodide: any
  *          containing the timestamp, amount0, and amount1 for each swap.
  */
 async function GetSwaps(token0: string, token1: string): Promise<TransformedSwap[]> {
+    // Create a cache
     const cache = new Cache({
         ttl: 360,              
     });
+
+    // Check if data is already in cache
     let outData: TransformedSwap[] = await cache.get("foo");
     if (outData) {
         return outData
     }
 
+    // If not, fetch data
     outData = []
 
     // Create a GraphQL client
     const client = new GraphQLClient(endpoint)
-
 
     // call endpoint 20 times for each of the 20 days
     const now = Math.floor(new Date().getTime() / 1000)
@@ -159,24 +166,61 @@ type TestSet = {
     point: string,
 }
 
+/**
+ * Generates trading signals and calculates portfolio performance.
+ *
+ * This function fetches swap data from the Uniswap subgraph, processes it
+ * into OHLC data, and applies Heikin-Ashi candlestick transformation,
+ * weighted moving average (WMA), and trading signal generation. It then
+ * calculates portfolio performance based on the generated signals.
+ *
+ * @param ts A TestSet object containing configuration for signal generation
+ *           and portfolio calculation, including whether token0 is the base,
+ *           initial capital, signal inversion, and the point of Heikin-Ashi
+ *           candlestick to use.
+ * @returns A promise that resolves to a tuple containing a DataFrame of the
+ *          portfolio and the calculated profit as a number.
+ */
+
 async function generateSignals(ts: TestSet): Promise<[DataFrame, number]> {
+    // fetch swap data from subgraph
     const data = await GetSwaps("0x4200000000000000000000000000000000000006", "0x570b1533F6dAa82814B25B62B5c7c4c55eB83947")
     const jsonData = JSON.stringify(data)
     
+    // convert to dataframe
     const pd = pyodide.pyimport("pandas")
     const df: DataFrame = pd.read_json(jsonData).set_index('timestamp')
 
+    // resample to 5 min
     const df_ohlc = resamplefn(df, '5Min', ts.isBase)
+    // heiken-ashi
     let df_ha = heikenfn(df_ohlc)
+    // weighted moving average
     df_ha = wmafn(df_ha, 20)
+    // signal generation
     df_ha = signalfn(df_ha, 20, ts.inverted, ts.point)
 
+    // portfolio calculation
     const [portfolio, profit] = portfoliofn(df_ha, ts.initValue)
+
+    // print last row
     console.log(portfolio.tail(1).to_csv())
+
+    // return the portfolio and profit
     return [portfolio, profit]
 }
 
 
+/**
+ * Runs the backtesting and signal generation for all test sets.
+ *
+ * This function is the entry point for the script. It loads the Pyodide environment,
+ * fetches swap data from the Uniswap subgraph, and runs the backtesting and signal
+ * generation for all test sets. It then prints out the results of the profitable
+ * and loss-making test sets.
+ *
+ * @returns A promise that resolves when all the test sets have been processed.
+ */
 async function main() {
     await loadPy()
 
