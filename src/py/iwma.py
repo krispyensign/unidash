@@ -2,11 +2,10 @@ import pandas as pd
 import numpy as np
 
 
-def wma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.DataFrame:
+def iwma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.DataFrame:
     """
-    Calculate the weighted moving average (WMA) of a column of a given DataFrame.
-    It also calculates a reverse weighted moving average (RWMA).  The reverse
-    weighted moving average is calculated by reversing the order of the weights
+    Calculate the inverted weighted moving average (WMA) of a column of a given DataFrame.
+    The inverted weighted moving average is calculated by reversing the order of the weights
     and applying the WMA.
 
     Parameters
@@ -16,12 +15,12 @@ def wma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.DataF
     period : int, optional
         The period in days. The default is 20.
     point : str, optional
-        The column to which the WMA will be applied. The default is 'ha_open'.
+        The column to which the IWMA will be applied. The default is 'ha_open'.
 
     Returns
     -------
     pd.Dataframe
-        The DataFrame with the 'WMA' column added.
+        The DataFrame with the 'IWMA' column added.
 
     Raises
     ------
@@ -40,11 +39,11 @@ def wma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.DataF
     if df.get(column, None) is None:
         raise ValueError(f"df must contain the provided column {column}")
 
-    df["WMA"] = df.rolling(f"{period}D", on="timestamp")[column].apply(
-        lambda x: np.average(x, weights=np.arange(len(x), 0, -1))
+    df["IWMA"] = df.rolling(f"{period}D", on="timestamp")[column].apply(
+        lambda x: np.average(x, weights=np.arange(1, len(x) + 1))
     )
 
     return df
 
 
-wma
+iwma
