@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def signal(ha_df: pd.DataFrame, wma_period: int = 20, inverted: bool = False, point: str = "ha_open") -> pd.DataFrame:
+def signal(ha_df: pd.DataFrame, wma_period: int = 20, inverted: bool = False, point: str = "ha_ask_open") -> pd.DataFrame:
     # Generate signals
     """
     Generate trading signals based on Heikin-Ashi candlesticks and a Weighted Moving Average (WMA).
@@ -32,14 +32,8 @@ def signal(ha_df: pd.DataFrame, wma_period: int = 20, inverted: bool = False, po
         raise ValueError("wma_period must be greater than 0")
     if ha_df.empty:
         raise ValueError("ha_df cannot be empty")
-    if "ha_open" not in ha_df.columns:
-        raise ValueError("ha_df must contain a 'ha_open' column")
-    if "ha_close" not in ha_df.columns:
-        raise ValueError("ha_df must contain a 'ha_close' column")
     if "WMA" not in ha_df.columns:
         raise ValueError("ha_df must contain a 'WMA' column")
-
-    ha_df["ha_mid"] = (ha_df["ha_open"] + ha_df["ha_close"]) / 2
 
     # initialize the signal column
     ha_df["signal"] = 0

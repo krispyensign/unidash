@@ -29,7 +29,7 @@ type DataFrame = {
     [key: string]: any
     copy(): DataFrame
     reset_index(): DataFrame
-    at: DataFrame
+    at: any
     loc: DataFrame
     shape: [number, number]
     resample(freq: string): DataFrame
@@ -40,11 +40,11 @@ type DataFrame = {
     to_json(): string
 }
 
-type resampleFunction = (dataIn: DataFrame, timeFrame: string, token0IsBase: boolean) => DataFrame
+type resampleFunction = (dataIn: DataFrame, timeFrame: string) => DataFrame
 type heikenFunction = (dataIn: DataFrame) => DataFrame
-type wmaFunction = (ha_df: DataFrame, wma_period: number) => DataFrame
+type wmaFunction = (ha_df: DataFrame, wma_period: number, point: string) => DataFrame
 type signalFunction = (ha_df: DataFrame, wma_period: number, inverted: boolean, point: string) => DataFrame
-type portfolioFunction = (dataIn: DataFrame, capital0: number) => [DataFrame, number]
+type portfolioFunction = (dataIn: DataFrame) => [DataFrame, number, number]
 let resamplefn: resampleFunction
 let heikenfn: heikenFunction
 let wmafn: wmaFunction
@@ -160,10 +160,17 @@ async function loadPy(): Promise<void> {
 }
 
 type TestSet = {
-    isBase: boolean,
-    initValue: number,
     inverted: boolean,
-    point: string,
+    signalPoint: string,
+    wmaPoint: string,
+}
+
+type Portfolio = {
+    timestamp: number,
+    amount: number,
+    value: number
+    base_value: number
+    inverted: boolean
 }
 
 /**
@@ -182,7 +189,7 @@ type TestSet = {
  *          portfolio and the calculated profit as a number.
  */
 
-async function generateSignals(ts: TestSet): Promise<[DataFrame, number]> {
+async function generateSignals(ts: TestSet): Promise<[DataFrame, number, number]> {
     // fetch swap data from subgraph
     const data = await GetSwaps("0x4200000000000000000000000000000000000006", "0x570b1533F6dAa82814B25B62B5c7c4c55eB83947")
     const jsonData = JSON.stringify(data)
@@ -192,22 +199,28 @@ async function generateSignals(ts: TestSet): Promise<[DataFrame, number]> {
     const df: DataFrame = pd.read_json(jsonData).set_index('timestamp')
 
     // resample to 5 min
-    const df_ohlc = resamplefn(df, '5Min', ts.isBase)
+    const df_ohlc = resamplefn(df, '5Min')
+    console.log("=========resampled=========")
+    console.log(df_ohlc.tail(1).to_csv())
     // heiken-ashi
     let df_ha = heikenfn(df_ohlc)
+    console.log("=========heiken-ashi=========")
+    console.log(df_ha.tail(1).to_csv())
     // weighted moving average
-    df_ha = wmafn(df_ha, 20)
+    df_ha = wmafn(df_ha, 20, ts.wmaPoint)
+    console.log("=========wma=========")
+    console.log(df_ha.tail(1).to_csv())
     // signal generation
-    df_ha = signalfn(df_ha, 20, ts.inverted, ts.point)
-
+    df_ha = signalfn(df_ha, 20, ts.inverted, ts.signalPoint)
+    console.log("=========signal=========")
+    console.log(df_ha.tail(1).to_csv())
     // portfolio calculation
-    const [portfolio, profit] = portfoliofn(df_ha, ts.initValue)
-
-    // print last row
+    const [portfolio, profitQuote, profitBase] = portfoliofn(df_ha)
+    console.log("=========portfolio=========")
     console.log(portfolio.tail(1).to_csv())
 
     // return the portfolio and profit
-    return [portfolio, profit]
+    return [portfolio, profitQuote, profitBase]
 }
 
 
@@ -224,65 +237,82 @@ async function generateSignals(ts: TestSet): Promise<[DataFrame, number]> {
 async function main() {
     await loadPy()
 
-    const testSets: TestSet[] = [
-        {isBase: true, initValue: 480869000, inverted: false, point: "ha_open"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "ha_high"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "ha_low"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "ha_close"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "ha_mid"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "open"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "high"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "low"},
-        {isBase: true, initValue: 480869000, inverted: false, point: "close"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "ha_open"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "ha_high"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "ha_low"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "ha_close"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "ha_mid"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "open"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "high"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "low"},
-        {isBase: true, initValue: 480869000, inverted: true, point: "close"},
-        {isBase: false, initValue: .08, inverted: false, point: "ha_open"},
-        {isBase: false, initValue: .08, inverted: false, point: "ha_high"},
-        {isBase: false, initValue: .08, inverted: false, point: "ha_low"},
-        {isBase: false, initValue: .08, inverted: false, point: "ha_close"},
-        {isBase: false, initValue: .08, inverted: false, point: "ha_mid"},
-        {isBase: false, initValue: .08, inverted: false, point: "open"},
-        {isBase: false, initValue: .08, inverted: false, point: "high"},
-        {isBase: false, initValue: .08, inverted: false, point: "low"},
-        {isBase: false, initValue: .08, inverted: false, point: "close"},
-        {isBase: false, initValue: .08, inverted: true, point: "ha_open"},
-        {isBase: false, initValue: .08, inverted: true, point: "ha_high"},
-        {isBase: false, initValue: .08, inverted: true, point: "ha_low"},
-        {isBase: false, initValue: .08, inverted: true, point: "ha_close"},
-        {isBase: false, initValue: .08, inverted: true, point: "ha_mid"},
-        {isBase: false, initValue: .08, inverted: true, point: "open"},
-        {isBase: false, initValue: .08, inverted: true, point: "high"},
-        {isBase: false, initValue: .08, inverted: true, point: "low"},
-        {isBase: false, initValue: .08, inverted: true, point: "close"},
+    const points = [
+        'open', 'close', 'high', 'low',
+        'ha_open', 'ha_close', 'ha_high', 'ha_low',
+        'ha_bid_open', 'ha_bid_close', 'ha_bid_high', 'ha_bid_low',
+        'ha_ask_open', 'ha_ask_close', 'ha_ask_high', 'ha_ask_low',
+        'ask_open', 'ask_close', 'ask_high', 'ask_low',
+        'bid_open', 'bid_close', 'bid_high', 'bid_low',
     ]
+    const trueOrFalse = [true, false]
 
-    let profit_results: [TestSet, DataFrame, number][] = []
-    let loss_results: [TestSet, DataFrame, number][] = []
+    const testSets: TestSet[] = []
+    for (const inverted of trueOrFalse) {
+        for (const signalPoint of points) {
+            for (const wmaPoint of points) {
+                testSets.push({inverted, signalPoint, wmaPoint})
+            }
+        }
+    }
+
+    let profit_results: [TestSet, DataFrame, number, number][] = []
+    let loss_results: [TestSet, DataFrame, number, number][] = []
 
     for (const ts of testSets) {
-        console.log(ts)
-        let [result, profit] = await generateSignals(ts)
-        if (profit > 0) {
-            profit_results.push([ts, result, profit])
+        //console.log(ts)
+        let [result, profitQuote, profitBase] = await generateSignals(ts)
+        if (profitQuote > 0) {
+            profit_results.push([ts, result, profitQuote, profitBase])
+        } else if (profitBase > 0) {
+            profit_results.push([ts, result, profitQuote, profitBase])
         } else {
-            loss_results.push([ts, result, profit])
+            loss_results.push([ts, result, profitQuote, profitBase])
         }
     }
 
     console.log("=============================================")
-    for (const [ts, result, profit] of profit_results) {
+    for (const [ts, result, profitQuote, profitBase] of profit_results) {
         console.log(JSON.stringify(ts))
         console.log(result.tail(1).to_csv())
-        console.log(profit)
+        console.log(`profitQuote: ${profitQuote} profitBase: ${profitBase}` )
         console.log("=============================================")
     }
+
+    // find maximum profit of profit_results
+    let max_profit_quote = 0
+    let max_profit_quote_ts: TestSet | undefined
+    let max_result_quote: DataFrame | undefined
+    for (const [ts, result, profitQuote, ] of profit_results) {
+        if (profitQuote > max_profit_quote) {
+            max_profit_quote = profitQuote
+            max_profit_quote_ts = ts
+            max_result_quote = result
+        }
+    }
+
+    console.log("=============================================")
+    console.log(`max profit quote: ${max_profit_quote}`) 
+    console.log(JSON.stringify(max_profit_quote_ts))
+    console.log(max_result_quote?.tail(1)?.to_csv())
+    console.log("=============================================")
+
+    let max_profit_base = 0
+    let max_profit_base_ts: TestSet | undefined
+    let max_result_base: DataFrame | undefined
+    for (const [ts, result, profitQuote, profitBase] of profit_results) {
+        if (profitBase > max_profit_base) {
+            max_profit_base = profitBase
+            max_profit_base_ts = ts
+            max_result_base = result
+        }
+    }
+
+    console.log("=============================================")
+    console.log(`max profit base: ${max_profit_base}`) 
+    console.log(JSON.stringify(max_profit_base_ts))
+    console.log(max_result_base?.tail(1)?.to_csv())
+    console.log("=============================================")
 }
 
 main()

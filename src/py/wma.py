@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def wma(df: pd.DataFrame, wma_period: int = 20) -> pd.DataFrame:
+def wma(df: pd.DataFrame, wma_period: int = 20, point: str = "ha_bid_close", reverse=False) -> pd.DataFrame:
     """
     Calculate the weighted moving average (WMA) of the Heikin Ashi 'ha_close' column
     of a given DataFrame.
@@ -26,20 +26,22 @@ def wma(df: pd.DataFrame, wma_period: int = 20) -> pd.DataFrame:
     ValueError
         If ha_df is empty.
     ValueError
-        If ha_df does not contain a 'ha_close' column.
+        If ha_df does not contain the provided column.
     """
 
     if wma_period <= 0:
         raise ValueError("wma_period must be greater than 0")
     if df.empty:
         raise ValueError("ha_df cannot be empty")
-    if df.get("ha_close", None) is None:
-        raise ValueError("ha_df must contain a 'ha_close' column")
+    if df.get(point, None) is None:
+        raise ValueError(f"ha_df must contain the provided column {point}")
 
-    kernel = np.arange(wma_period, 0, -1)
-    kernel = np.concatenate([np.zeros(wma_period - 1), kernel / kernel.sum()])
-    df["WMA"] = np.convolve(df["ha_close"], kernel, "same")
-    df.fillna(method="ffill", inplace=True)
+
+    if not reverse:
+        df["WMA"] = df.rolling(f"{wma_period}D", on="timestamp")[point].apply(lambda x: np.average(x, weights=np.arange(len(x), 0, -1)))   
+    else:
+        df["WMA"] = df.rolling(f"{wma_period}D", on="timestamp")[point].apply(lambda x: np.average(x, weights=np.arange(1, len(x) + 1)))   
+
 
     return df
 

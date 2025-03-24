@@ -1,35 +1,39 @@
 import pandas as pd
 
 
-def portfolio(data: pd.DataFrame, initial: float = 1) -> tuple[pd.DataFrame, float]:
+def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, float, float]:
     """
     Calculate the portfolio value based on a DataFrame of OHLC data.
 
     Args:
         data (pd.DataFrame): A DataFrame containing OHLC data.
+
+    Returns:
+        tuple[pd.DataFrame, float, float]: A tuple containing the portfolio DataFrame,
+        the value in terms of the quote token and the value in terms of the base token.
     """
 
-    # given a data frame with a signal that is 1 for buy and 0 for sell and a
-    # position of 1 for buy, -1 for sell and 0 for no action
-    # calculate the assets, the remaining capital, and the total value
-
-    #cumsum column is created to check the holding of the position
-    data['cumsum']=data['position'].cumsum()
-
-    # count number of buy signals in position
-
     portfolio=pd.DataFrame()
-    ratio = initial/data.loc[0, 'open']
-    print("ratio",ratio)
-    portfolio['holdings']=data['position']*data['close']*ratio
-    portfolio['cash']=initial-(data['position']*data['close']*ratio).cumsum()
-    portfolio['total asset']=portfolio['holdings']+portfolio['cash']
-    portfolio['profit']=portfolio['total asset']-initial
+
     portfolio['timestamp']=data['timestamp']
-    portfolio['buy count']=data["position"].value_counts()[1]
-    portfolio['sell count']=data["position"].value_counts()[-1]
+
+    # if position is 1 then it is a buy signal, if its a buy signal then
+    # use the ask_close price
+    # if the position is -1 then it is a sell signal, if its a sell signal then
+    # use the bid_close price
+    portfolio['buy signals'] = abs(data['position'].where(data['position'] == 1, 0))
+    portfolio['sell signals'] = abs(data['position'].where(data['position'] == -1, 0))
+    portfolio['buy spend']=(portfolio['buy signals']*data['ask_close']).cumsum()
+    portfolio['sell spend']=(portfolio['sell signals']*data['bid_close']).cumsum()
+    
+    portfolio['quote net asset']=portfolio['sell spend']-portfolio['buy spend']
+    portfolio['base net asset']=(portfolio['quote net asset']/data['bid_close'])
+    portfolio['bid_close']=data['bid_close']
+    portfolio['ask_close']=data['ask_close']
+
     portfolio.set_index('timestamp',inplace=True)
-    return [portfolio, portfolio['profit'].iloc[-1]/initial]
+
+    return portfolio, portfolio['quote net asset'].iloc[-1], portfolio['base net asset'].iloc[-1]
 
 
 portfolio
