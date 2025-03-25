@@ -44,6 +44,18 @@ export function generateSignals(
     case 'IWMA_HEIKEN_ASHI_INVERSE':
       df_ha = strategy.iwmaHeikenAshiInverseStrategy(ts, df_ohlc)
       break
+    case 'WMA_OHLC':
+      df_ha = strategy.wmaOhlcStrategy(ts, df_ohlc)
+      break
+    case 'IWMA_OHLC':
+      df_ha = strategy.iwmaOhlcStrategy(ts, df_ohlc)
+      break
+    case 'WMA_OHLC_INVERSE':
+      df_ha = strategy.wmaOhlcInverseStrategy(ts, df_ohlc)
+      break
+    case 'IWMA_OHLC_INVERSE':
+      df_ha = strategy.iwmaOhlcInverseStrategy(ts, df_ohlc)
+      break
   }
 
   // portfolio calculation

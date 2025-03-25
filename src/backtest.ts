@@ -42,6 +42,11 @@ export function backTest(df: DataFrame) {
   for (const signalPoint of points) {
     for (const wmaPoint of points) {
       for (const strategy of strategies) {
+        // skip test set if strategy is HEIKEN_ASHI and input is not HEIKEN_ASHI columns
+        if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
+          continue
+        }
+
         let testSet: TestSet = {
           signalColumnIn: signalPoint,
           wmaColumnIn: wmaPoint,
@@ -98,4 +103,8 @@ export function backTest(df: DataFrame) {
   console.log(JSON.stringify(max_profit_base_ts))
   console.log(max_result_base?.tail(1)?.to_csv())
   console.log('=============================================')
+}
+
+function input_is_ha(column0: string, column1: string) {
+  return column0.startsWith('ha_') || column1.startsWith('ha_')
 }

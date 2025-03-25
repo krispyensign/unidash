@@ -37,7 +37,7 @@ async function loadCode(command: string): Promise<any> {
  */
 export async function loadPy(): Promise<void> {
   pyodide = await loadPyodide()
-  await pyodide.loadPackage(['numpy', 'scipy', 'pandas'])
+  await pyodide.loadPackage(['numpy', 'pandas'])
 
   chart = {
     ohlc: await loadCode('ohlc'),
