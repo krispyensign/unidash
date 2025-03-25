@@ -17,7 +17,6 @@ const client = new MongoClient(uri)
 async function run(): Promise<void> {
   try {
     await client.connect()
-    const collections = await client.db('tokens').collections()
 
     // database and collection code goes here
     // find code goes here

@@ -1,5 +1,5 @@
 import { loadDataFrame, loadPy } from './pytrade'
-import { GetSwaps } from './swaps'
+import { GetSwaps } from './swapshistory'
 import { backTest } from './backtest'
 
 /**
