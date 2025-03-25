@@ -79,5 +79,6 @@ export default defineConfig([
             "@typescript-eslint/no-extra-non-null-assertion": "error",
             "@typescript-eslint/no-inferrable-types": "error",
             "@typescript-eslint/no-loss-of-precision": "error",
+            "@typescript-eslint/no-unused-vars": "off"
         },
 }]);

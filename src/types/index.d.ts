@@ -13,6 +13,8 @@ export type Swap = {
   timestamp: number
   amount0: number
   amount1: number
+  token0: string
+  token1: string
 }
 
 export type DataFrame = {

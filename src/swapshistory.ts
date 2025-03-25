@@ -1,99 +1,102 @@
 // Define the GraphQL endpoint for the Uniswap subgraph v3
 import { GraphQLClient, gql } from 'graphql-request'
-import { apiKey } from './private.json'
 import type { Swap, Data, RawSwap } from './types'
-// eslint-disable-next-line max-len
-export const endpoint = `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1`
-import { Cache } from 'file-system-cache'
 import type { Token } from './types'
 import { Injectable } from '@angular/core'
 import { DbService } from './db'
+import { graphqlEndpoint } from './constants'
 
 @Injectable({
   providedIn: 'root',
 })
-export class SwapshistoryService {
+export class SwapHistoryService {
   dbService: DbService
 
   constructor(dbService: DbService) {
     this.dbService = dbService
   }
 
-  /**
-   * Fetches swap data for specified tokens from a GraphQL endpoint.
-   *
-   * This function queries the Uniswap subgraph to retrieve swap data for the
-   * specified token pair over the last 20 days. It makes 20 separate requests,
-   * each fetching swaps for one day, and aggregates the results.
-   *
-   * TODO: Cache each day individually so that it doesn't have to fetch the full
-   * X number of days every time.  This way this can be configurable to download
-   * any number of days.
-   *
-   * @param token0 The address of the first token in the pair.
-   * @param token1 The address of the second token in the pair.
-   * @returns A promise that resolves to an array of TransformedSwap objects,
-   *          containing the timestamp, amount0, and amount1 for each swap.
-   */
-  public async GetSwaps(token0: Token, token1: Token): Promise<Swap[]> {
-    // Create a cache
-    const cache = new Cache({
-      ttl: 360,
-    })
-
-    // Check if data is already in cache
-    let outData: Swap[] = await cache.get('foo')
-    if (outData) {
-      return outData
+  public async GetSwapsByDate(
+    token0: Token,
+    token1: Token,
+    date: Date,
+    batchSize = 100
+  ): Promise<Swap[]> {
+    // check if data is already saved
+    const swaps = await this.dbService.getSwapsByDate(date, token0, token1)
+    if (swaps.length > 0) {
+      console.log('swaps found in db')
+      return swaps
     }
 
-    // If not, fetch data
-    outData = []
+    // if not, fetch data
+    let outData: Swap[] = []
 
-    // Create a GraphQL client
-    const client = new GraphQLClient(endpoint)
+    // create a graphql client
+    const client = new GraphQLClient(graphqlEndpoint)
 
-    // call endpoint 20 times for each of the 20 days
-    const now = Math.floor(new Date().getTime() / 1000)
-    const dayInSecs = 86400
-    const numDays = 20
-    for (let i = now; i > now - dayInSecs * numDays; i -= dayInSecs) {
-      // Define the GraphQL query
+    // define the date range to query
+    const i = Math.round(date.setUTCHours(0, 0, 0, 0) / 1000)
+    const j = Math.round(date.setUTCHours(23, 59, 59, 999) / 1000)
+
+    // get swaps in k batches of batchSize
+    let k = 0
+    while (true) {
+      // define the graphql query
       const query = gql`
-        {
-            swaps(
-                where: {
-                    token0: "${token0}",
-                    token1: "${token1}",
-                    timestamp_gt: "${i}"
-                }
-                orderBy: timestamp
-                orderDirection: desc
-            ) {
-                timestamp
-                amount0
-                amount1
+      { 
+        swaps(
+            where: {
+                token0: "${token0}",
+                token1: "${token1}",
+                timestamp_gte: ${i},
+                timestamp_lte: ${j},
             }
+            orderBy: timestamp
+            orderDirection: desc
+            skip: ${k * batchSize}
+            first: ${(k + 1) * batchSize}
+        ) {
+            timestamp
+            amount0
+            amount1
         }
-        `
+      }
+      `
 
+      // make the graphql request
       const data: Data = await client.request(query)
 
+      // break the loop if there are no more results
+      if (data.swaps.length === 0) {
+        break
+      }
+
+      // aggregate the results
       outData = outData.concat(
         data.swaps.map((swap: RawSwap) => {
           return {
-            date: new Date(parseInt(swap.timestamp)).setHours(0, 0, 0, 0),
+            date: i * 1000,
             timestamp: parseInt(swap.timestamp),
             amount0: parseFloat(swap.amount0),
             amount1: parseFloat(swap.amount1),
+            token0: token0,
+            token1: token1,
           }
         })
       )
+
+      // increment the offset for the next request
+      k++
     }
 
-    await cache.set('foo', outData)
+    const isSaved = await this.dbService.insertSwaps(outData)
+    if (!isSaved) {
+      throw new Error('Failed to save data')
+    }
 
-    console.log(outData.length)
+    console.log('swaps saved to db')
+
     return outData
   }
 }
