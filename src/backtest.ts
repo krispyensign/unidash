@@ -1,41 +1,42 @@
-import { generateSignals } from "./signals"
-import { Strategy } from "./strategy"
-import { DataFrame, TestStrategy, TestSet } from "./types"
+import { generateSignals } from './signals'
+import { Strategy } from './strategy'
+import { DataFrame, TestStrategy, TestSet } from './types'
+
+const points = [
+  'open',
+  'close',
+  'high',
+  'low',
+  'ha_open',
+  'ha_close',
+  'ha_high',
+  'ha_low',
+  'ha_bid_open',
+  'ha_bid_close',
+  'ha_bid_high',
+  'ha_bid_low',
+  'ha_ask_open',
+  'ha_ask_close',
+  'ha_ask_high',
+  'ha_ask_low',
+  'ask_open',
+  'ask_close',
+  'ask_high',
+  'ask_low',
+  'bid_open',
+  'bid_close',
+  'bid_high',
+  'bid_low',
+]
+
+const strategyName = [
+  TestStrategy.WMA_HEIKEN_ASHI,
+  TestStrategy.IWMA_HEIKEN_ASHI,
+  TestStrategy.WMA_HEIKEN_ASHI_INVERSE,
+  TestStrategy.IWMA_HEIKEN_ASHI_INVERSE,
+]
 
 export function backTest(df: DataFrame) {
-  const points = [
-    'open',
-    'close',
-    'high',
-    'low',
-    'ha_open',
-    'ha_close',
-    'ha_high',
-    'ha_low',
-    'ha_bid_open',
-    'ha_bid_close',
-    'ha_bid_high',
-    'ha_bid_low',
-    'ha_ask_open',
-    'ha_ask_close',
-    'ha_ask_high',
-    'ha_ask_low',
-    'ask_open',
-    'ask_close',
-    'ask_high',
-    'ask_low',
-    'bid_open',
-    'bid_close',
-    'bid_high',
-    'bid_low',
-  ]
-  const strategyName = [
-    TestStrategy.WMA_HEIKEN_ASHI,
-    TestStrategy.IWMA_HEIKEN_ASHI,
-    TestStrategy.WMA_HEIKEN_ASHI_INVERSE,
-    TestStrategy.IWMA_HEIKEN_ASHI_INVERSE,
-  ]
-
   const testSets: TestSet[] = []
   for (const signalPoint of points) {
     for (const wmaPoint of points) {

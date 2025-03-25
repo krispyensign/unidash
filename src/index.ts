@@ -20,7 +20,7 @@ async function main() {
   )
 
   const df = await loadDataFrame(JSON.stringify(data))
-    
+
   backTest(df)
 }
 

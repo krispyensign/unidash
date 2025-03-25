@@ -1,6 +1,6 @@
-import { chart, util } from "./pytrade"
-import { Strategy } from "./strategy"
-import { TestSet, DataFrame, TestStrategy } from "./types"
+import { chart, util } from './pytrade'
+import { Strategy } from './strategy'
+import { TestSet, DataFrame, TestStrategy } from './types'
 
 /**
  * Generates trading signals and calculates portfolio values based on the provided test set and data.

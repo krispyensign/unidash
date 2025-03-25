@@ -1,11 +1,9 @@
-
 // Define the GraphQL endpoint for the Uniswap subgraph v3
 import { GraphQLClient, gql } from 'graphql-request'
 import { apiKey } from './private.json'
 import { TransformedSwap, Data, Swap, DataFrame } from './types'
 export const endpoint = `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1`
 import { Cache } from 'file-system-cache'
-
 
 /**
  * Fetches swap data for specified tokens from a GraphQL endpoint.
