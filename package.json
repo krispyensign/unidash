@@ -23,6 +23,7 @@
     "start": "node --experimental-wasm-stack-switching dist/index.js"
   },
   "dependencies": {
+    "angular": "^1.8.3",
     "file-system-cache": "^2.4.7",
     "graphql-request": "^7.1.2",
     "mongodb": "^6.15.0",
