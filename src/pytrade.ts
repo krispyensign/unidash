@@ -23,7 +23,7 @@ export async function loadDataFrame(jsonData: string): Promise<DataFrame> {
  *
  * @returns The loaded Python function.
  */
-async function loadCode(pyodide: any, command: string): Promise<any> {
+async function loadCode(command: string): Promise<any> {
   const filepath = path.join(__dirname, 'py', command + '.py')
   const code = fs.readFileSync(filepath, 'utf8')
   const fn = await pyodide.runPythonAsync(code)
@@ -39,14 +39,14 @@ export async function loadPy(): Promise<void> {
   pyodide = await loadPyodide()
   await pyodide.loadPackage(['numpy', 'scipy', 'pandas'])
 
-  chart.ohlc = await loadCode(pyodide, 'ohlc')
-  chart.heiken = await loadCode(pyodide, 'heiken_ashi')
+  chart.ohlc = await loadCode('ohlc')
+  chart.heiken = await loadCode('heiken_ashi')
 
-  indicator.wma = await loadCode(pyodide, 'wma')
-  indicator.iwma = await loadCode(pyodide, 'iwma')
-  indicator.signal = await loadCode(pyodide, 'signal')
+  indicator.wma = await loadCode('wma')
+  indicator.iwma = await loadCode('iwma')
+  indicator.signal = await loadCode('signal')
 
-  util.portfolio = await loadCode(pyodide, 'portfolio')
+  util.portfolio = await loadCode('portfolio')
 
   pd = await pyodide.pyimport('pandas')
 }
