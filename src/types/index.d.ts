@@ -1,14 +1,15 @@
-export type Swap = {
+export type RawSwap = {
   timestamp: string
   amount0: string
   amount1: string
 }
 
 export type Data = {
-  swaps: Swap[]
+  swaps: RawSwap[]
 }
 
-export type TransformedSwap = {
+export type Swap = {
+  date: number
   timestamp: number
   amount0: number
   amount1: number
