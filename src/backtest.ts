@@ -1,6 +1,6 @@
 import { generateSignals } from './signals'
 import { Strategy } from './strategy'
-import { DataFrame, TestStrategy, TestSet } from './types'
+import type { TestStrategy, DataFrame, TestSet } from './types'
 
 const points = [
   'open',
@@ -29,11 +29,11 @@ const points = [
   'bid_low',
 ]
 
-const strategyName = [
-  TestStrategy.WMA_HEIKEN_ASHI,
-  TestStrategy.IWMA_HEIKEN_ASHI,
-  TestStrategy.WMA_HEIKEN_ASHI_INVERSE,
-  TestStrategy.IWMA_HEIKEN_ASHI_INVERSE,
+const strategies: TestStrategy[] = [
+  'IWMA_HEIKEN_ASHI_INVERSE',
+  'IWMA_HEIKEN_ASHI',
+  'WMA_HEIKEN_ASHI',
+  'WMA_HEIKEN_ASHI_INVERSE',
 ]
 
 export function backTest(df: DataFrame) {
@@ -41,7 +41,7 @@ export function backTest(df: DataFrame) {
   const testSets: TestSet[] = []
   for (const signalPoint of points) {
     for (const wmaPoint of points) {
-      for (const strategy of strategyName) {
+      for (const strategy of strategies) {
         let testSet: TestSet = {
           signalColumnIn: signalPoint,
           wmaColumnIn: wmaPoint,

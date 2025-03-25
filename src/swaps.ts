@@ -1,9 +1,10 @@
 // Define the GraphQL endpoint for the Uniswap subgraph v3
 import { GraphQLClient, gql } from 'graphql-request'
 import { apiKey } from './private.json'
-import { TransformedSwap, Data, Swap, DataFrame } from './types'
+import type { TransformedSwap, Data, Swap } from './types'
 export const endpoint = `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1`
 import { Cache } from 'file-system-cache'
+import { Token } from './types'
 
 /**
  * Fetches swap data for specified tokens from a GraphQL endpoint.
@@ -21,7 +22,7 @@ import { Cache } from 'file-system-cache'
  * @returns A promise that resolves to an array of TransformedSwap objects,
  *          containing the timestamp, amount0, and amount1 for each swap.
  */
-export async function GetSwaps(token0: string, token1: string): Promise<TransformedSwap[]> {
+export async function GetSwaps(token0: Token, token1: Token): Promise<TransformedSwap[]> {
   // Create a cache
   const cache = new Cache({
     ttl: 360,

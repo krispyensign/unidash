@@ -1,6 +1,6 @@
 import { chart, util } from './pytrade'
 import { Strategy } from './strategy'
-import { TestSet, DataFrame, TestStrategy } from './types'
+import type { TestSet, DataFrame } from './types'
 
 /**
  * Generates trading signals and calculates portfolio values based on the provided test set and data.
@@ -32,16 +32,16 @@ export function generateSignals(
 
   let df_ha: DataFrame
   switch (ts.testStrategy) {
-    case TestStrategy.WMA_HEIKEN_ASHI:
+    case 'WMA_HEIKEN_ASHI':
       df_ha = strategy.wmaHeikenAshiStrategy(ts, df_ohlc)
       break
-    case TestStrategy.IWMA_HEIKEN_ASHI:
+    case 'IWMA_HEIKEN_ASHI':
       df_ha = strategy.iwmaHeikenAshiStrategy(ts, df_ohlc)
       break
-    case TestStrategy.WMA_HEIKEN_ASHI_INVERSE:
+    case 'WMA_HEIKEN_ASHI_INVERSE':
       df_ha = strategy.wmaHeikenAshiInverseStrategy(ts, df_ohlc)
       break
-    case TestStrategy.IWMA_HEIKEN_ASHI_INVERSE:
+    case 'IWMA_HEIKEN_ASHI_INVERSE':
       df_ha = strategy.iwmaHeikenAshiInverseStrategy(ts, df_ohlc)
       break
   }

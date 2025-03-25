@@ -1,5 +1,5 @@
 import { chart, indicator } from './pytrade'
-import { TestSet, DataFrame } from './types'
+import type { TestSet, DataFrame } from './types'
 
 export class Strategy {
   /**
@@ -18,7 +18,7 @@ export class Strategy {
   public wmaHeikenAshiStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
     df_ha = indicator.wma(df_ha, 20, ts.wmaColumnIn)
-    df_ha = indicator.signal(df_ha, ts.signalColumnIn, 'WMA')
+    df_ha = indicator.signal_compare(df_ha, ts.signalColumnIn, 'WMA')
     return df_ha
   }
 
@@ -39,7 +39,7 @@ export class Strategy {
   public wmaHeikenAshiInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
     df_ha = indicator.wma(df_ha, 20, ts.wmaColumnIn)
-    df_ha = indicator.signal(df_ha, 'WMA', ts.signalColumnIn)
+    df_ha = indicator.signal_compare(df_ha, 'WMA', ts.signalColumnIn)
     return df_ha
   }
 
@@ -59,7 +59,7 @@ export class Strategy {
   public iwmaHeikenAshiStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
     df_ha = indicator.iwma(df_ha, 20, ts.wmaColumnIn)
-    df_ha = indicator.signal(df_ha, ts.signalColumnIn, 'IWMA')
+    df_ha = indicator.signal_compare(df_ha, ts.signalColumnIn, 'IWMA')
     return df_ha
   }
 
@@ -80,7 +80,7 @@ export class Strategy {
   public iwmaHeikenAshiInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
     df_ha = indicator.iwma(df_ha, 20, ts.wmaColumnIn)
-    df_ha = indicator.signal(df_ha, 'IWMA', ts.signalColumnIn)
+    df_ha = indicator.signal_compare(df_ha, 'IWMA', ts.signalColumnIn)
     return df_ha
   }
 }

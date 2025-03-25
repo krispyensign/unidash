@@ -1,6 +1,6 @@
 import path from 'path'
 import { loadPyodide } from 'pyodide'
-import { DataFrame, TradingChart, TradingIndicator, TradingUtil } from './types'
+import type { DataFrame, TradingChart, TradingIndicator, TradingUtil } from './types'
 import fs from 'fs'
 
 let pyodide: any
@@ -39,14 +39,20 @@ export async function loadPy(): Promise<void> {
   pyodide = await loadPyodide()
   await pyodide.loadPackage(['numpy', 'scipy', 'pandas'])
 
-  chart.ohlc = await loadCode('ohlc')
-  chart.heiken = await loadCode('heiken_ashi')
+  chart = {
+    ohlc: await loadCode('ohlc'),
+    heiken: await loadCode('heiken_ashi'),
+  }
 
-  indicator.wma = await loadCode('wma')
-  indicator.iwma = await loadCode('iwma')
-  indicator.signal = await loadCode('signal')
+  indicator = {
+    wma: await loadCode('wma'),
+    iwma: await loadCode('iwma'),
+    signal_compare: await loadCode('signal_compare'),
+  }
 
-  util.portfolio = await loadCode('portfolio')
+  util = {
+    portfolio: await loadCode('portfolio'),
+  }
 
   pd = await pyodide.pyimport('pandas')
 }
