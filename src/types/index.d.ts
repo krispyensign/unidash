@@ -35,6 +35,11 @@ export type TestSet = {
   testStrategy: TestStrategy
 }
 
+export enum Token {
+  WETH = '0x4200000000000000000000000000000000000006',
+  BOBO = '0x570b1533F6dAa82814B25B62B5c7c4c55eB83947',
+}
+
 export enum TestStrategy {
   WMA_HEIKEN_ASHI = 'WMA_HEIKEN_ASHI',
   IWMA_HEIKEN_ASHI = 'IWMA_HEIKEN_ASHI',

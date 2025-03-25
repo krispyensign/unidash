@@ -37,6 +37,7 @@ const strategyName = [
 ]
 
 export function backTest(df: DataFrame) {
+  // generate all possible test sets
   const testSets: TestSet[] = []
   for (const signalPoint of points) {
     for (const wmaPoint of points) {
@@ -51,13 +52,10 @@ export function backTest(df: DataFrame) {
     }
   }
 
+  // run all test sets
   const strategyService = new Strategy()
-
   let profit_results: [TestSet, DataFrame, number, number][] = []
-  // let loss_results: [TestSet, DataFrame, number, number][] = []
-
   for (const ts of testSets) {
-    //console.log(ts)
     let [result, profitQuote, profitBase] = generateSignals(ts, df, strategyService)
     if (profitQuote > 0) {
       profit_results.push([ts, result, profitQuote, profitBase])

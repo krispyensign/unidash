@@ -1,6 +1,7 @@
 import { loadDataFrame, loadPy } from './pytrade'
 import { GetSwaps } from './swaps'
 import { backTest } from './backtest'
+import { Token } from './types'
 
 /**
  * Runs the backtesting and signal generation for all test sets.
@@ -14,10 +15,7 @@ import { backTest } from './backtest'
  */
 async function main() {
   await loadPy()
-  const data = await GetSwaps(
-    '0x4200000000000000000000000000000000000006',
-    '0x570b1533F6dAa82814B25B62B5c7c4c55eB83947'
-  )
+  const data = await GetSwaps(Token.WETH, Token.BOBO)
 
   const df = await loadDataFrame(JSON.stringify(data))
 
