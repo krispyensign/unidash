@@ -1,10 +1,14 @@
 import path from 'path'
-import { loadPyodide } from 'pyodide'
-import type { DataFrame, TradingChart, TradingIndicator, TradingUtil } from './types'
+import { loadPyodide, PyodideInterface } from 'pyodide'
+import type { DataFrame, PythonFunc, TradingChart, TradingIndicator, TradingUtil } from './types'
 import fs from 'fs'
 
-let pyodide: any
-let pd: any
+type Pandas = {
+  read_json: (json: string) => DataFrame
+}
+
+let pyodide: PyodideInterface
+let pd: Pandas
 
 export let indicator: TradingIndicator
 export let chart: TradingChart
@@ -23,10 +27,11 @@ export async function loadDataFrame(jsonData: string): Promise<DataFrame> {
  *
  * @returns The loaded Python function.
  */
-async function loadCode(command: string): Promise<any> {
+async function loadCode<T>(command: T): Promise<Extract<PythonFunc, { kind: T }>> {
   const filepath = path.join(__dirname, 'py', command + '.py')
   const code = fs.readFileSync(filepath, 'utf8')
   const fn = await pyodide.runPythonAsync(code)
+
   return fn
 }
 

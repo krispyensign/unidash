@@ -10,7 +10,6 @@ import type { Token } from './types'
 import { MongoClient } from 'mongodb'
 
 // local usage only.  do not run in a real production environment
-
 const uri =
   'mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.4.2' // eslint-disable-line max-len
 const client = new MongoClient(uri)

@@ -16,7 +16,12 @@ const compat = new FlatCompat({
     allConfig: js.configs.all
 });
 
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
 export default defineConfig([
+    eslint.configs.recommended,
+    tseslint.configs.recommended,
     // globalIgnores(["node_modules/*", "dist/*"]), 
     {
         // extends: compat.extends(".prettierrc.mjs", "plugin:@typescript-eslint/recommended"),
@@ -50,13 +55,9 @@ export default defineConfig([
                 avoidEscape: true,
             }],
 
-            "require-atomic-updates": "off",
             semi: "off",
-            "prefer-const": "off",
             "no-trailing-spaces": "error",
             "no-var": "error",
-            "no-loss-of-precision": "off",
-            "no-dupe-class-members": "off",
 
             "no-restricted-properties": ["error", {
                 object: "describe",
@@ -70,15 +71,9 @@ export default defineConfig([
                 default: "array",
             }],
 
-            "@typescript-eslint/ban-types": "off",
-            "@typescript-eslint/camelcase": "off",
             "@typescript-eslint/explicit-function-return-type": "error",
             "@typescript-eslint/explicit-module-boundary-types": "error",
-            "@typescript-eslint/member-delimiter-style": "off",
             // "@typescript-eslint/prefer-optional-chain": "error",
-            "@typescript-eslint/no-non-null-assertion": "off",
-            "@typescript-eslint/no-warning-comments": "off",
-            "@typescript-eslint/no-empty-function": "off",
             "@typescript-eslint/no-use-before-define": "error",
             "@typescript-eslint/no-confusing-non-null-assertion": "error",
             "@typescript-eslint/no-extra-non-null-assertion": "error",

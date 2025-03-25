@@ -64,7 +64,7 @@ export function backTest(df: DataFrame): void {
           continue
         }
 
-        let testSet: TestSet = {
+        const testSet: TestSet = {
           signalColumnIn: signalPoint,
           wmaColumnIn: wmaPoint,
           testStrategy: strategy,
@@ -76,9 +76,9 @@ export function backTest(df: DataFrame): void {
 
   // run all test sets
   const strategyService = new Strategy()
-  let profit_results: [TestSet, DataFrame, number, number][] = []
+  const profit_results: [TestSet, DataFrame, number, number][] = []
   for (const ts of testSets) {
-    let [result, profitQuote, profitBase] = generateSignals(ts, df, strategyService)
+    const [result, profitQuote, profitBase] = generateSignals(ts, df, strategyService)
     if (profitQuote > 0) {
       profit_results.push([ts, result, profitQuote, profitBase])
     } else if (profitBase > 0) {

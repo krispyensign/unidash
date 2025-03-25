@@ -51,17 +51,52 @@ export type Portfolio = {
   inverted: boolean
 }
 
+export type wmaFunc = {
+  kind: 'wma'
+  (df: DataFrame, period: number, column: string): DataFrame
+}
+export type iwmaFunc = {
+  kind: 'iwma'
+  (df: DataFrame, period: number, column: string): DataFrame
+}
+export type signalCompareFunc = {
+  kind: 'signal_compare'
+  (df: DataFrame, column0: string, column1: string): DataFrame
+}
+
+export type ohlcFunc = {
+  kind: 'ohlc'
+  (dataIn: DataFrame, timeFrame: string): DataFrame
+}
+
+export type heikenFunc = {
+  kind: 'heiken_ashi'
+  (dataIn: DataFrame): DataFrame
+}
+export type portfolioFunc = {
+  kind: 'portfolio'
+  (dataIn: DataFrame): [DataFrame, number, number]
+}
+
 export type TradingIndicator = {
-  wma: (df: DataFrame, period: number, column: string) => DataFrame
-  iwma: (df: DataFrame, period: number, column: string) => DataFrame
-  signal_compare: (df: DataFrame, column0: string, column1: string) => DataFrame
+  wma: wmaFunc
+  iwma: iwmaFunc
+  signal_compare: signalCompareFunc
 }
 
 export type TradingChart = {
-  ohlc: (dataIn: DataFrame, timeFrame: string) => DataFrame
-  heiken: (dataIn: DataFrame) => DataFrame
+  ohlc: ohlcFunc
+  heiken: heikenFunc
 }
 
 export type TradingUtil = {
-  portfolio: (dataIn: DataFrame) => [DataFrame, number, number]
+  portfolio: portfolioFunc
 }
+
+export type PythonFunc =
+  | ohlcFunc
+  | wmaFunc
+  | iwmaFunc
+  | signalCompareFunc
+  | heikenFunc
+  | portfolioFunc
