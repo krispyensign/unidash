@@ -2,9 +2,33 @@
 import { GraphQLClient, gql } from 'graphql-request'
 import { apiKey } from './private.json'
 import type { TransformedSwap, Data, Swap } from './types'
+// eslint-disable-next-line max-len
 export const endpoint = `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1`
 import { Cache } from 'file-system-cache'
-import { Token } from './types'
+import type { Token } from './types'
+
+import { MongoClient } from 'mongodb'
+
+// local usage only.  do not run in a real production environment
+
+const uri =
+  'mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.4.2' // eslint-disable-line max-len
+const client = new MongoClient(uri)
+
+async function run(): Promise<void> {
+  try {
+    await client.connect()
+    const collections = await client.db('tokens').collections()
+
+    // database and collection code goes here
+    // find code goes here
+    // iterate code goes here
+  } finally {
+    // Ensures that the client will close when you finish/error
+    await client.close()
+  }
+}
+run().catch(console.dir)
 
 /**
  * Fetches swap data for specified tokens from a GraphQL endpoint.

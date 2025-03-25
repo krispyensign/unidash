@@ -5,38 +5,55 @@ import type { TestStrategy, DataFrame, TestSet } from './types'
 const points = [
   'open',
   'close',
-  'high',
-  'low',
+  // 'high',
+  // 'low',
   'ha_open',
   'ha_close',
-  'ha_high',
-  'ha_low',
+  // 'ha_high',
+  // 'ha_low',
   'ha_bid_open',
   'ha_bid_close',
-  'ha_bid_high',
-  'ha_bid_low',
+  // 'ha_bid_high',
+  // 'ha_bid_low',
   'ha_ask_open',
   'ha_ask_close',
-  'ha_ask_high',
-  'ha_ask_low',
+  // 'ha_ask_high',
+  // 'ha_ask_low',
   'ask_open',
   'ask_close',
-  'ask_high',
-  'ask_low',
+  // 'ask_high',
+  // 'ask_low',
   'bid_open',
   'bid_close',
-  'bid_high',
-  'bid_low',
+  // 'bid_high',
+  // 'bid_low',
 ]
 
 const strategies: TestStrategy[] = [
-  'IWMA_HEIKEN_ASHI_INVERSE',
-  'IWMA_HEIKEN_ASHI',
+  // 'IWMA_HEIKEN_ASHI_INVERSE',
+  // 'IWMA_HEIKEN_ASHI',
   'WMA_HEIKEN_ASHI',
   'WMA_HEIKEN_ASHI_INVERSE',
 ]
 
-export function backTest(df: DataFrame) {
+function input_is_ha(column0: string, column1: string): boolean {
+  return column0.startsWith('ha_') || column1.startsWith('ha_')
+}
+
+/**
+ * Performs backtesting on a DataFrame using a variety of strategies and signal points.
+ *
+ * This function generates all possible test sets by iterating over predefined signal
+ * points, WMA points, and strategies. It filters out invalid test sets where the strategy
+ * requires Heiken-Ashi columns but the input columns do not match. For each valid test set,
+ * it runs the signal generation process and collects the results that yield positive profits
+ * in either quote or base currency. It then identifies and logs the test set and results
+ * with the maximum profit for both quote and base currencies.
+ *
+ * @param df The input DataFrame containing trading data to be used for backtesting.  The columns
+ * expected in the dataframe are timestamp, amount0, and amount1
+ */
+export function backTest(df: DataFrame): void {
   // generate all possible test sets
   const testSets: TestSet[] = []
   for (const signalPoint of points) {
@@ -103,8 +120,4 @@ export function backTest(df: DataFrame) {
   console.log(JSON.stringify(max_profit_base_ts))
   console.log(max_result_base?.tail(1)?.to_csv())
   console.log('=============================================')
-}
-
-function input_is_ha(column0: string, column1: string) {
-  return column0.startsWith('ha_') || column1.startsWith('ha_')
 }

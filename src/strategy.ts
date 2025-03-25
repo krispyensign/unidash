@@ -23,13 +23,14 @@ export class Strategy {
   }
 
   /**
-   * Generate trading signals using an inverse weighted moving average (WMA) of Heikin-Ashi candlesticks.
+   * Generate trading signals using an inverse weighted moving average (WMA) of Heikin-Ashi
+   * candlesticks.
    *
-   * This function processes the input DataFrame to generate trading signals using an inverse weighted
-   * moving average (WMA) of Heikin-Ashi candlesticks. It first resamples the data to 5-minute intervals,
-   * then generates Heikin-Ashi candlesticks. It calculates the WMA of the Heikin-Ashi candlesticks and
-   * generates trading signals based on the inverse comparison of the WMA and a specified column. The
-   * trading signals are added to the DataFrame as a new column.
+   * This function processes the input DataFrame to generate trading signals using an inverse
+   * weighted moving average (WMA) of Heikin-Ashi candlesticks. It first resamples the data to
+   * 5-minute intervals, then generates Heikin-Ashi candlesticks. It calculates the WMA of the
+   * Heikin-Ashi candlesticks and generates trading signals based on the inverse comparison of the
+   * WMA and a specified column. The trading signals are added to the DataFrame as a new column.
    *
    * @param ts The test set containing parameters for signal generation and WMA calculation.
    * @param df The input DataFrame containing the trading data.
@@ -44,12 +45,14 @@ export class Strategy {
   }
 
   /**
-   * Generate trading signals using an inverse weighted moving average (IWMA) of Heikin-Ashi candlesticks.
+   * Generate trading signals using an inverse weighted moving average (IWMA) of Heikin-Ashi
+   * candlesticks.
    *
-   * This function processes the input DataFrame to generate trading signals using an inverse weighted
-   * moving average (IWMA) of Heikin-Ashi candlesticks. It first resamples the data to 5-minute intervals,
-   * then generates Heikin-Ashi candlesticks. It calculates the IWMA of the Heikin-Ashi candlesticks and
-   * generates trading signals based on the IWMA. The trading signals are added to the DataFrame as a new column.
+   * This function processes the input DataFrame to generate trading signals using an inverse
+   * weighted moving average (IWMA) of Heikin-Ashi candlesticks. It first resamples the data to
+   * 5-minute intervals, then generates Heikin-Ashi candlesticks. It calculates the IWMA of the
+   * Heikin-Ashi candlesticks and generates trading signals based on the IWMA. The trading signals
+   * are added to the DataFrame as a new column.
    *
    * @param ts The test set containing parameters for signal generation and IWMA calculation.
    * @param df The input DataFrame containing the trading data.
@@ -64,14 +67,15 @@ export class Strategy {
   }
 
   /**
-   * Generate trading signals using an inverse weighted moving average (IWMA) of Heikin-Ashi candlesticks
-   * and generate trading signals based on the inverse comparison of the IWMA and a specified column.
+   * Generate trading signals using an inverse weighted moving average (IWMA) of Heikin-Ashi
+   * candlesticks and generate trading signals based on the inverse comparison of the IWMA and a
+   * specified column.
    *
-   * This function processes the input DataFrame to generate trading signals using an inverse weighted
-   * moving average (IWMA) of Heikin-Ashi candlesticks. It first resamples the data to 5-minute intervals,
-   * then generates Heikin-Ashi candlesticks. It calculates the IWMA of the Heikin-Ashi candlesticks and
-   * generates trading signals based on the inverse comparison of the IWMA and a specified column. The
-   * trading signals are added to the DataFrame as a new column.
+   * This function processes the input DataFrame to generate trading signals using an inverse
+   * weighted moving average (IWMA) of Heikin-Ashi candlesticks. It first resamples the data to
+   * 5-minute intervals, then generates Heikin-Ashi candlesticks. It calculates the IWMA of the
+   * Heikin-Ashi candlesticks and generates trading signals based on the inverse comparison of the
+   * IWMA and a specified column. The trading signals are added to the DataFrame as a new column.
    *
    * @param ts The test set containing parameters for signal generation and IWMA calculation.
    * @param df The input DataFrame containing the trading data.
@@ -85,8 +89,8 @@ export class Strategy {
   }
 
   /**
-   * Generate trading signals using a weighted moving average (WMA) of OHLC candlesticks and generate
-   * trading signals based on the comparison of the WMA and a specified column.
+   * Generate trading signals using a weighted moving average (WMA) of OHLC candlesticks and
+   * generate trading signals based on the comparison of the WMA and a specified column.
    *
    * This function processes the input DataFrame to generate trading signals using a weighted
    * moving average (WMA) of OHLC candlesticks. It calculates the WMA of the OHLC candlesticks and
@@ -104,13 +108,13 @@ export class Strategy {
   }
 
   /**
-   * Generate trading signals using a weighted moving average (WMA) of OHLC candlesticks and generate
-   * trading signals based on the inverse comparison of the WMA and a specified column.
+   * Generate trading signals using a weighted moving average (WMA) of OHLC candlesticks and
+   * generate trading signals based on the inverse comparison of the WMA and a specified column.
    *
    * This function processes the input DataFrame to generate trading signals using a weighted
    * moving average (WMA) of OHLC candlesticks. It calculates the WMA of the OHLC candlesticks and
-   * generates trading signals based on the inverse comparison of the WMA and a specified column. The
-   * trading signals are added to the DataFrame as a new column.
+   * generates trading signals based on the inverse comparison of the WMA and a specified column.
+   * The trading signals are added to the DataFrame as a new column.
    *
    * @param ts The test set containing parameters for signal generation and WMA calculation.
    * @param df_ohlc The input DataFrame containing the OHLC candlesticks.
@@ -142,7 +146,8 @@ export class Strategy {
 
   /**
    * Generate trading signals using an inverted weighted moving average (IWMA) of OHLC candlesticks
-   * and generate trading signals based on the inverse comparison of the IWMA and a specified column.
+   * and generate trading signals based on the inverse comparison of the IWMA and a specified
+   * column.
    *
    * This function processes the input DataFrame to generate trading signals using an inverted
    * weighted moving average (IWMA) of OHLC candlesticks. It calculates the IWMA of the OHLC

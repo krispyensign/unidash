@@ -12,7 +12,7 @@ import { backTest } from './backtest'
  *
  * @returns A promise that resolves when all the test sets have been processed.
  */
-async function main() {
+async function main(): Promise<void> {
   await loadPy()
   const data = await GetSwaps(
     '0x4200000000000000000000000000000000000006',

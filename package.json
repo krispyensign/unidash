@@ -19,15 +19,27 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc && cp -fr src/py dist/",
     "fix": "npx prettier -w src/** && npx eslint --fix src/",
-    "clean": "rimraf bin/ dist/ node_modules/ logs/ package-lock.json"
+    "clean": "rimraf bin/ dist/ node_modules/ logs/ package-lock.json",
+    "start": "node --experimental-wasm-stack-switching dist/index.js"
   },
   "dependencies": {
     "file-system-cache": "^2.4.7",
     "graphql-request": "^7.1.2",
+    "mongodb": "^6.15.0",
     "pyodide": "^0.27.4",
-    "typescript": "^5.8.2"
+    "source-map-support": "^0.5.21"
   },
   "devDependencies": {
-    "@types/node": "^22.13.11"
+    "@types/mongodb": "^4.0.6",
+    "@types/node": "^22.13.11",
+    "@types/source-map-support": "^0.5.10",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.2.4",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
   }
 }

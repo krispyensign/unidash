@@ -3,10 +3,10 @@ import { Strategy } from './strategy'
 import type { TestSet, DataFrame } from './types'
 
 /**
- * Generates trading signals and calculates portfolio values based on the provided test set and data.
+ * Generates trading signals and calculates portfolio values based on the provided test set.
  *
- * This function processes the input DataFrame to generate trading signals using Heikin-Ashi candlesticks
- * and a weighted moving average. It then calculates the resulting portfolio values.
+ * This function processes the input DataFrame to generate trading signals using Heikin-Ashi
+ * candlesticks and a weighted moving average. It then calculates the resulting portfolio values.
  *
  * The process includes:
  * 1. Resampling the data to 5-minute intervals.

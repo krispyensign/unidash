@@ -16,9 +16,6 @@ export type TransformedSwap = {
 
 export type DataFrame = {
   copy(): DataFrame
-  reset_index(): DataFrame
-  shape: [number, number]
-  resample(freq: string): DataFrame
   set_index(column: string): DataFrame
   head(count?: number): DataFrame
   tail(count?: number): DataFrame
