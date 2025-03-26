@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const df = await loadDataFrame(JSON.stringify(allSwaps))
 
   let testSet: TestSet | null = null
-  if (cheatCode === undefined) {
+  if (cheatCode === null) {
     const result = backTest(df)
     if (!result) {
       console.log('no valid test sets')
