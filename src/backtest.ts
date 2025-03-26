@@ -53,7 +53,7 @@ function input_is_ha(column0: string, column1: string): boolean {
  * @param df The input DataFrame containing trading data to be used for backtesting.  The columns
  * expected in the dataframe are timestamp, amount0, and amount1
  */
-export function backTest(df: DataFrame): void {
+export function backTest(df: DataFrame): [TestSet, DataFrame] | undefined {
   // generate all possible test sets
   const testSets: TestSet[] = []
   for (const signalPoint of points) {
@@ -126,4 +126,10 @@ export function backTest(df: DataFrame): void {
   console.log(JSON.stringify(max_profit_base_ts))
   console.log(max_result_base?.tail(1)?.to_csv())
   console.log('=============================================')
+
+  if (!max_profit_quote_ts || !max_result_quote) {
+    return undefined
+  }
+
+  return [max_profit_quote_ts, max_result_quote]
 }

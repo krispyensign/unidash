@@ -3,22 +3,13 @@ import { Strategy } from './strategy'
 import type { TestSet, DataFrame } from './types'
 
 /**
- * Generates trading signals and calculates portfolio values based on the provided test set.
+ * Generate trading signals using the specified strategy and parameters.
  *
- * This function processes the input DataFrame to generate trading signals using Heikin-Ashi
- * candlesticks and a weighted moving average. It then calculates the resulting portfolio values.
- *
- * The process includes:
- * 1. Resampling the data to 5-minute intervals.
- * 2. Generating Heikin-Ashi candlesticks.
- * 3. Calculating the weighted moving average (WMA).
- * 4. Generating trading signals based on the WMA and test set parameters.
- * 5. Calculating the portfolio values in terms of quote and base currencies.
- *
- * @param ts The test set containing parameters for signal generation and WMA calculation.
+ * @param ts The test set containing parameters for signal generation.
  * @param df The input DataFrame containing the trading data.
- * @returns A promise that resolves to a tuple containing the portfolio DataFrame,
- *          profit in the quote currency, and profit in the base currency.
+ * @param strategy The strategy to use for generating signals.
+ * @returns A tuple containing the DataFrame with the trading signals, a boolean indicating
+ * if the DataFrame is valid, the profit for the quote asset, and the profit for the base asset.
  */
 export function generateSignals(
   ts: TestSet,

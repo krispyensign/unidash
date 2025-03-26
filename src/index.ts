@@ -2,9 +2,9 @@ import { loadDataFrame, loadPy } from './pytrade'
 import { SwapHistoryService } from './swapshistory'
 import { DbService } from './db'
 import { Injector } from '@angular/core'
-import { Swap } from './types'
+import { Swap, TestSet } from './types'
 import { backTest } from './backtest'
-import { dayInMS, daysBack, Tokens } from './constants'
+import { cheatCode, dayInMS, daysBack, Tokens } from './constants'
 
 async function GetSwapHistory(
   swapService: SwapHistoryService,
@@ -38,7 +38,16 @@ async function main(): Promise<void> {
 
   const df = await loadDataFrame(JSON.stringify(allSwaps))
 
-  backTest(df)
+  let testSet: TestSet | null = null
+  if (cheatCode === undefined) {
+    const result = backTest(df)
+    if (!result) {
+      console.log('no valid test sets')
+      process.exit(1)
+    }
+
+    testSet = result[0]
+  }
 
   process.exit(0)
 }
