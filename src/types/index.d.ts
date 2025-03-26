@@ -77,7 +77,7 @@ export type heikenFunc = {
 }
 export type portfolioFunc = {
   kind: 'portfolio'
-  (dataIn: DataFrame): [DataFrame, number, number]
+  (dataIn: DataFrame): [DataFrame, boolean, number, number]
 }
 
 export type TradingIndicator = {

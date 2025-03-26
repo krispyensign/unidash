@@ -1,5 +1,6 @@
 import { apiKey } from './private.json'
 
+export const dayInMS = 1000 * 60 * 60 * 24
 export const daysBack = 60
 export const mongodbURI =
   'mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.4.2' // eslint-disable-line max-len

@@ -14,16 +14,16 @@ export class DbService {
   }
 
   public async getSwapsByDate(date: Date, token0: string, token1: string): Promise<Swap[]> {
-    console.log('getSwapsByDate', date.getTime(), token0, token1)
-    const dateA = new Date(date)
-    const dateB = new Date(date)
+    const dateA = new Date(new Date(date).setUTCHours(0, 0, 0, 0))
+    const dateB = new Date(new Date(date).setUTCHours(23, 59, 59, 999))
+    console.log('getSwapsByDate', dateA, token0, token1)
     const cursor = this.client
       .db('swaps')
       .collection<Swap>('swapshistory')
       .find({
         timestamp: {
-          $gte: new Date(dateA.setHours(0, 0, 0, 0)).getTime(),
-          $lte: new Date(dateB.setHours(23, 59, 59, 999)).getTime(),
+          $gte: dateA.getTime(),
+          $lte: dateB.getTime(),
         },
         token0: token0,
         token1: token1,

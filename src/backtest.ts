@@ -3,35 +3,35 @@ import { Strategy } from './strategy'
 import type { TestStrategy, DataFrame, TestSet } from './types'
 
 const points = [
-  'open',
+  // 'open',
   // 'close',
   // 'high',
-  'low',
-  'ha_open',
+  // 'low',
+  // 'ha_open',
   'ha_close',
   // 'ha_high',
   // 'ha_low',
-  'ha_bid_open',
-  'ha_bid_close',
+  // 'ha_bid_open',
+  // 'ha_bid_close',
   // 'ha_bid_high',
   // 'ha_bid_low',
-  'ha_ask_open',
-  'ha_ask_close',
+  // 'ha_ask_open',
+  // 'ha_ask_close',
   // 'ha_ask_high',
   // 'ha_ask_low',
   'ask_open',
-  'ask_close',
+  // 'ask_close',
   // 'ask_high',
   // 'ask_low',
-  'bid_open',
-  'bid_close',
+  // 'bid_open',
+  // 'bid_close',
   // 'bid_high',
   // 'bid_low',
 ]
 
 const strategies: TestStrategy[] = [
-  // 'IWMA_HEIKEN_ASHI_INVERSE',
-  // 'IWMA_HEIKEN_ASHI',
+  'IWMA_HEIKEN_ASHI_INVERSE',
+  'IWMA_HEIKEN_ASHI',
   'WMA_HEIKEN_ASHI',
   'WMA_HEIKEN_ASHI_INVERSE',
 ]
@@ -84,10 +84,10 @@ export function backTest(df: DataFrame): void {
     if (k % 10 === 0) {
       console.log(`processed ${k} of ${testSets.length} test sets`)
     }
-    const [result, profitQuote, profitBase] = generateSignals(ts, df, strategyService)
-    if (profitQuote > 0) {
+    const [result, isValid, profitQuote, profitBase] = generateSignals(ts, df, strategyService)
+    if (profitQuote > 0 && isValid) {
       profit_results.push([ts, result, profitQuote, profitBase])
-    } else if (profitBase > 0) {
+    } else if (profitBase > 0 && isValid) {
       profit_results.push([ts, result, profitQuote, profitBase])
     }
   }

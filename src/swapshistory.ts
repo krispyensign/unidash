@@ -57,12 +57,14 @@ export class SwapHistoryService {
             skip: ${k * batchSize}
             first: ${(k + 1) * batchSize}
         ) {
+            id
             timestamp
             amount0
             amount1
         }
       }
       `
+      // console.log(query)
 
       // make the graphql request
       const data: Data = await client.request(query)

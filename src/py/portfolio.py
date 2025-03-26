@@ -1,7 +1,8 @@
 import pandas as pd
+import numpy as np
 
 
-def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, float, float]:
+def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     """
     Calculate the portfolio value based on a DataFrame of OHLC data.
 
@@ -33,10 +34,15 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, float, float]:
     portfolio["bid_close"] = data["bid_close"]
     portfolio["ask_close"] = data["ask_close"]
 
+    # check if the net asset is less than 0 this would mean that we have a loss
+    # and that this is a bad signal
+    result = any(np.where(portfolio["quote net asset"] < 0, False, True))
+
     portfolio.set_index("timestamp", inplace=True)
 
     return (
         portfolio,
+        result,
         portfolio["quote net asset"].iloc[-1],
         portfolio["base net asset"].iloc[-1],
     )

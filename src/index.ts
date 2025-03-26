@@ -4,8 +4,26 @@ import { DbService } from './db'
 import { Injector } from '@angular/core'
 import { Swap } from './types'
 import { backTest } from './backtest'
-import { daysBack, Tokens } from './constants'
-import { start } from 'repl'
+import { dayInMS, daysBack, Tokens } from './constants'
+
+async function GetSwapHistory(
+  swapService: SwapHistoryService,
+  token0: Tokens,
+  token1: Tokens
+): Promise<Swap[]> {
+  let starterTimestamp = new Date().getTime()
+  starterTimestamp -= dayInMS * daysBack
+
+  const allSwaps: Swap[] = []
+
+  for (let i = 0; i < daysBack; i++) {
+    const date = new Date(starterTimestamp + i * dayInMS)
+    const swaps = await swapService.GetSwapsByDate(token0, token1, date)
+    allSwaps.push(...swaps)
+  }
+
+  return allSwaps
+}
 
 async function main(): Promise<void> {
   await loadPy()
@@ -16,19 +34,7 @@ async function main(): Promise<void> {
     ],
   })
 
-  const dayInMS = 1000 * 60 * 60 * 24
-  let starterTimestamp = new Date().getTime()
-  starterTimestamp -= dayInMS * daysBack
-
-  const allSwaps: Swap[] = []
-
-  for (let i = 0; i < daysBack; i++) {
-    const date = new Date(starterTimestamp + i * dayInMS)
-    const swaps = await injector
-      .get(SwapHistoryService)
-      .GetSwapsByDate(Tokens.WETH, Tokens.BOBO, date)
-    allSwaps.push(...swaps)
-  }
+  const allSwaps = await GetSwapHistory(injector.get(SwapHistoryService), Tokens.WETH, Tokens.BOBO)
 
   const df = await loadDataFrame(JSON.stringify(allSwaps))
 

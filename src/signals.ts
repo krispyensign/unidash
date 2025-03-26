@@ -24,7 +24,7 @@ export function generateSignals(
   ts: TestSet,
   df: DataFrame,
   strategy: Strategy
-): [DataFrame, number, number] {
+): [DataFrame, boolean, number, number] {
   // resample to 5 min
   const df_ohlc = chart.ohlc(df, '5Min')
   // console.log("=========resampled=========")
@@ -59,10 +59,10 @@ export function generateSignals(
   }
 
   // portfolio calculation
-  const [portfolio, profitQuote, profitBase] = util.portfolio(df_ha)
+  const [portfolio, isValid, profitQuote, profitBase] = util.portfolio(df_ha)
   // console.log("=========portfolio=========")
   // console.log(portfolio.tail(1).to_csv())
 
   // return the portfolio and profit
-  return [portfolio, profitQuote, profitBase]
+  return [portfolio, isValid, profitQuote, profitBase]
 }
