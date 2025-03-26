@@ -45,3 +45,4 @@
 - [ ] Backtest
 - [ ] Strategy
 - [ ] Main workflow
+- [ ] Dashboard

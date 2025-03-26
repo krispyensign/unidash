@@ -1,13 +1,16 @@
 import { loadDataFrame, loadPy } from './pytrade'
 import { SwapHistoryService } from './swapshistory'
 import { DbService } from './db'
-import { Injector } from '@angular/core'
+import { Injectable, Injector } from '@angular/core'
 import { Swap, TestSet } from './types'
 import { cheatCode, dayInMS, daysBack, Tokens } from './constants'
 import { Strategy } from './strategy'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
 
+@Injectable({
+  providedIn: 'root',
+})
 export class MainWorkflow {
   swapService: SwapHistoryService
   signalService: Signals
@@ -30,13 +33,11 @@ export class MainWorkflow {
     return swaps
   }
 
-  public async run(): Promise<void> {
-    await loadPy()
-
+  public async run(): Promise<boolean> {
     const allSwaps = await this.GetSwapHistory(Tokens.WETH, Tokens.BOBO)
     if (allSwaps.length === 0) {
       console.log('no swaps found')
-      process.exit(1)
+      return false
     }
 
     const latestSwap = allSwaps[allSwaps.length - 1]
@@ -54,7 +55,7 @@ export class MainWorkflow {
       const result = this.backtestService.backTest(df)
       if (!result) {
         console.log('no valid test sets')
-        process.exit(1)
+        return false
       }
 
       testSet = result[0]
@@ -62,7 +63,7 @@ export class MainWorkflow {
 
     if (testSet === null) {
       console.log('no valid test sets')
-      process.exit(1)
+      return false
     }
 
     const [dfSignals, valid, quoteProfit, baseProfit] = this.signalService.generateSignals(
@@ -72,23 +73,34 @@ export class MainWorkflow {
 
     if (!valid) {
       console.log('invalid signals')
-      process.exit(1)
+      return false
     }
 
-    process.exit(0)
+    return true
   }
 }
 
-const injector = Injector.create({
-  providers: [
-    { provide: DbService, deps: [] },
-    { provide: Strategy, deps: [] },
-    { provide: SwapHistoryService, deps: [DbService] },
-    { provide: Signals, deps: [Strategy] },
-    { provide: BacktestService, deps: [Signals] },
-    { provide: MainWorkflow, deps: [SwapHistoryService, Signals, BacktestService] },
-  ],
-})
+async function main(): Promise<void> {
+  await loadPy()
+  const injector = Injector.create({
+    providers: [
+      { provide: DbService, deps: [] },
+      { provide: Strategy, deps: [] },
+      { provide: SwapHistoryService, deps: [DbService] },
+      { provide: Signals, deps: [Strategy] },
+      { provide: BacktestService, deps: [Signals] },
+      { provide: MainWorkflow, deps: [SwapHistoryService, Signals, BacktestService] },
+    ],
+  })
 
-const mainWorkflow = injector.get(MainWorkflow)
-mainWorkflow.run()
+  const mainWorkflow = injector.get(MainWorkflow)
+  const success = await mainWorkflow.run()
+  if (!success) {
+    console.log('something went wrong')
+    throw new Error('something went wrong')
+  }
+
+  console.log('done')
+}
+
+main().finally(() => process.exit(0))
