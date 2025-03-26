@@ -1,5 +1,6 @@
 export type RawSwap = {
   timestamp: string
+  id: string
   amount0: string
   amount1: string
 }
@@ -10,6 +11,7 @@ export type Data = {
 
 export type Swap = {
   timestamp: number
+  swapId: string
   amount0: number
   amount1: number
   token0: string

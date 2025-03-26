@@ -78,6 +78,7 @@ export class SwapHistoryService {
       outData = outData.concat(
         data.swaps.map((swap: RawSwap) => {
           return {
+            swapId: swap.id,
             timestamp: parseInt(swap.timestamp) * 1000,
             amount0: parseFloat(swap.amount0),
             amount1: parseFloat(swap.amount1),
