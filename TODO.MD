@@ -2,7 +2,6 @@
 
 ## The List
 
-
 - [ ] Log last X hours of positions / signals
 - [ ] Run using the accepted testcase
 - [ ] Push Alerting
