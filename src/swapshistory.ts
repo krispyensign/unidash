@@ -16,28 +16,31 @@ export class SwapHistoryService {
     this.dbService = dbService
   }
 
-  public async GetSwapsByDate(
+  public async GetSwapsSince(
     token0: Token,
     token1: Token,
     date: Date,
     batchSize = 100
   ): Promise<Swap[]> {
     // check if data is already saved
-    const swaps = await this.dbService.getSwapsByDate(date, token0, token1)
-    if (swaps.length > 0) {
-      console.log('swaps found in db')
-      return swaps
-    }
-
-    // if not, fetch data
+    const swaps = await this.dbService.getSwapsSince(date, token0, token1)
     let outData: Swap[] = []
+    let latestDate = 0
+    if (swaps.length > 0) {
+      latestDate = Math.round(swaps[swaps.length - 1].timestamp / 1000)
+      const latestSwap = swaps[swaps.length - 1]
+      console.log(
+        'latest swap: %s %s %s',
+        latestSwap.swapId,
+        new Date(latestSwap.timestamp).toLocaleDateString(),
+        new Date(latestSwap.timestamp).toLocaleTimeString()
+      )
+    } else {
+      latestDate = Math.round(new Date(new Date(date).setUTCHours(0, 0, 0, 0)).getTime() / 1000)
+    }
 
     // create a graphql client
     const client = new GraphQLClient(graphqlEndpoint)
-
-    // define the date range to query
-    const i = Math.round(new Date(date).setUTCHours(0, 0, 0, 0) / 1000)
-    const j = Math.round(new Date(date).setUTCHours(23, 59, 59, 0) / 1000)
 
     // get swaps in k batches of batchSize
     let k = 0
@@ -49,13 +52,12 @@ export class SwapHistoryService {
             where: {
                 token0: "${token0}",
                 token1: "${token1}",
-                timestamp_gte: ${i},
-                timestamp_lte: ${j},
+                timestamp_gte: ${latestDate}
             }
             orderBy: timestamp
             orderDirection: desc
             skip: ${k * batchSize}
-            first: ${(k + 1) * batchSize}
+            first: ${batchSize}
         ) {
             id
             timestamp
@@ -64,7 +66,7 @@ export class SwapHistoryService {
         }
       }
       `
-      // console.log(query)
+      console.log(query)
 
       // make the graphql request
       const data: Data = await client.request(query)
@@ -103,6 +105,8 @@ export class SwapHistoryService {
     }
 
     console.log('swaps saved to db')
+    outData = swaps.concat(outData)
+    outData.sort((a, b) => a.timestamp - b.timestamp)
 
     return outData
   }

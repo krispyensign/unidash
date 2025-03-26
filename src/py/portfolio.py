@@ -33,6 +33,7 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     portfolio["base net asset"] = portfolio["quote net asset"] / data["bid_close"]
     portfolio["bid_close"] = data["bid_close"]
     portfolio["ask_close"] = data["ask_close"]
+    portfolio["position"] = data["position"]
 
     # check if the net asset is less than 0 this would mean that we have a loss
     # and that this is a bad signal

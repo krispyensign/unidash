@@ -1,6 +1,10 @@
+import { Injectable } from '@angular/core'
 import { chart, indicator } from './pytrade'
 import type { TestSet, DataFrame } from './types'
 
+@Injectable({
+  providedIn: 'root',
+})
 export class Strategy {
   /**
    * Generate trading signals using a weighted moving average (WMA) of Heikin-Ashi candlesticks.
@@ -36,7 +40,6 @@ export class Strategy {
    * @param df The input DataFrame containing the trading data.
    * @returns A DataFrame with the trading signals added.
    */
-
   public wmaHeikenAshiInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
     df_ha = indicator.wma(df_ha, 20, ts.wmaColumnIn)
