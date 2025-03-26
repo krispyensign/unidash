@@ -36,8 +36,8 @@ export class SwapHistoryService {
     const client = new GraphQLClient(graphqlEndpoint)
 
     // define the date range to query
-    const i = Math.round(date.setUTCHours(0, 0, 0, 0) / 1000)
-    const j = Math.round(date.setUTCHours(23, 59, 59, 999) / 1000)
+    const i = Math.round(new Date(date).setUTCHours(0, 0, 0, 0) / 1000)
+    const j = Math.round(new Date(date).setUTCHours(23, 59, 59, 0) / 1000)
 
     // get swaps in k batches of batchSize
     let k = 0
@@ -76,8 +76,7 @@ export class SwapHistoryService {
       outData = outData.concat(
         data.swaps.map((swap: RawSwap) => {
           return {
-            date: i * 1000,
-            timestamp: parseInt(swap.timestamp),
+            timestamp: parseInt(swap.timestamp) * 1000,
             amount0: parseFloat(swap.amount0),
             amount1: parseFloat(swap.amount1),
             token0: token0,
@@ -90,6 +89,11 @@ export class SwapHistoryService {
       k++
     }
 
+    if (outData.length === 0) {
+      throw new Error('No data found')
+    }
+
+    // save the data
     const isSaved = await this.dbService.insertSwaps(outData)
     if (!isSaved) {
       throw new Error('Failed to save data')

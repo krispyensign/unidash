@@ -5,6 +5,7 @@ import { Injector } from '@angular/core'
 import { Swap } from './types'
 import { backTest } from './backtest'
 import { daysBack, Tokens } from './constants'
+import { start } from 'repl'
 
 async function main(): Promise<void> {
   await loadPy()
@@ -15,13 +16,14 @@ async function main(): Promise<void> {
     ],
   })
 
-  const startDate = new Date(new Date().getUTCDate() - daysBack)
+  const dayInMS = 1000 * 60 * 60 * 24
+  let starterTimestamp = new Date().getTime()
+  starterTimestamp -= dayInMS * daysBack
+
   const allSwaps: Swap[] = []
 
   for (let i = 0; i < daysBack; i++) {
-    const date = new Date()
-    date.setUTCDate(startDate.getUTCDate() + i)
-    date.setUTCHours(0, 0, 0, 0)
+    const date = new Date(starterTimestamp + i * dayInMS)
     const swaps = await injector
       .get(SwapHistoryService)
       .GetSwapsByDate(Tokens.WETH, Tokens.BOBO, date)

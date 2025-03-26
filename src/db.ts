@@ -15,11 +15,19 @@ export class DbService {
 
   public async getSwapsByDate(date: Date, token0: string, token1: string): Promise<Swap[]> {
     console.log('getSwapsByDate', date.getTime(), token0, token1)
-    const cursor = this.client.db('swaps').collection<Swap>('swapshistory').find({
-      date: date.getTime(),
-      token0: token0,
-      token1: token1,
-    })
+    const dateA = new Date(date)
+    const dateB = new Date(date)
+    const cursor = this.client
+      .db('swaps')
+      .collection<Swap>('swapshistory')
+      .find({
+        timestamp: {
+          $gte: new Date(dateA.setHours(0, 0, 0, 0)).getTime(),
+          $lte: new Date(dateB.setHours(23, 59, 59, 999)).getTime(),
+        },
+        token0: token0,
+        token1: token1,
+      })
 
     const swaps: Swap[] = []
     for await (const doc of cursor) {

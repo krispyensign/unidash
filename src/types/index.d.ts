@@ -9,7 +9,6 @@ export type Data = {
 }
 
 export type Swap = {
-  date: number
   timestamp: number
   amount0: number
   amount1: number
