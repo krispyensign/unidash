@@ -42,6 +42,9 @@ export class BacktestService {
           if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
             continue
           }
+          if (strategy.includes('OHLC') && input_is_ha(signalPoint, wmaPoint)) {
+            continue
+          }
 
           const testSet: TestSet = {
             signalColumnIn: signalPoint,
@@ -54,20 +57,34 @@ export class BacktestService {
     }
 
     // run all test sets
-    const strategyService = new Strategy()
-
     let k = 0
     const profit_results: [TestSet, DataFrame, number, number][] = []
     for (const ts of testSets) {
       k++
-      if (k % 10 === 0) {
-        console.log(`processed ${k} of ${testSets.length} test sets`)
+      let genResult: [DataFrame, boolean, number, number] | null
+      try {
+        genResult = this.signals.generateSignals(ts, df)
+        if (genResult === null) {
+          console.log('invalid signals')
+          continue
+        }
+      } catch (e) {
+        console.log(e)
+        console.log(ts)
+        throw e
       }
-      const [result, isValid, profitQuote, profitBase] = this.signals.generateSignals(ts, df)
+      const [result, isValid, profitQuote, profitBase] = genResult
+
       if (profitQuote > 0 && isValid) {
         profit_results.push([ts, result, profitQuote, profitBase])
       } else if (profitBase > 0 && isValid) {
         profit_results.push([ts, result, profitQuote, profitBase])
+      }
+      if (k % 10 === 0) {
+        console.log(
+          `processed ${k} of ${testSets.length} test sets. ${profit_results.length} valid signals`
+        )
+        console.log(`last test set: ${colorize(ts)} ${colorize(result.tail(1).to_json())}`)
       }
     }
     console.log('processed all test sets')

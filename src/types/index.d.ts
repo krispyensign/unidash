@@ -21,6 +21,7 @@ export type Swap = {
 export type DataFrame = {
   copy(): DataFrame
   set_index(column: string): DataFrame
+  reset_index(): DataFrame
   head(count?: number): DataFrame
   tail(count?: number): DataFrame
   to_json(): string

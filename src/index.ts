@@ -2,12 +2,12 @@ import { loadDataFrame, loadPy } from './pytrade'
 import { SwapHistoryService } from './swapshistory'
 import { DbService } from './db'
 import { Injectable, Injector } from '@angular/core'
-import { DataFrame, Swap, TestSet } from './types'
-import { cheatCode, dayInMS, daysBack, mostRecentTradeCount, Tokens } from './constants'
+import { DataFrame, Swap, TestSet, Token } from './types'
+import { cheatCode, dayInMS, daysBack, mostRecentTradeCount } from './constants'
 import { Strategy } from './strategy'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
-import { priority, heartbeat } from './private.json'
+import { priority, heartbeat, tokenIn0, tokenIn1 } from './private.json'
 
 @Injectable({
   providedIn: 'root',
@@ -26,7 +26,7 @@ export class MainWorkflow {
     this.backtestService = backtestService
   }
 
-  public async GetSwapHistory(token0: Tokens, token1: Tokens): Promise<Swap[]> {
+  public async GetSwapHistory(token0: Token, token1: Token): Promise<Swap[]> {
     const starterTimestamp = new Date(new Date().setUTCHours(0, 0, 0, 1) - dayInMS * daysBack)
 
     const swaps = await this.swapService.GetSwapsSince(token0, token1, starterTimestamp)
@@ -35,7 +35,7 @@ export class MainWorkflow {
   }
 
   public async run(): Promise<boolean> {
-    const allSwaps = await this.GetSwapHistory(Tokens.WETH, Tokens.BOBO)
+    const allSwaps = await this.GetSwapHistory(tokenIn0 as Token, tokenIn1 as Token)
     if (allSwaps.length === 0) {
       console.log('no swaps found')
       return false
@@ -43,14 +43,28 @@ export class MainWorkflow {
 
     const df = await loadDataFrame(JSON.stringify(allSwaps))
 
-    const testSet: TestSet = this.newMethod(df)
+    const testSet: TestSet = this.backTest(df)
 
-    const [dfSignals, valid] = this.signalService.generateSignals(testSet, df)
+    const result = this.signalService.generateSignals(testSet, df)
+    if (result === null) {
+      throw new Error('invalid signals')
+    }
+    const [dfSignals, valid] = result
     if (!valid) {
       throw new Error('invalid signals')
-      return false
     }
 
+    const { mostRecentPosition, mostRecentTrade } = this.getMostRecentTrades(dfSignals)
+
+    await this.pushAlert(mostRecentPosition, mostRecentTrade)
+
+    return true
+  }
+
+  private getMostRecentTrades(dfSignals: DataFrame): {
+    mostRecentPosition: [string, number]
+    mostRecentTrade: [number, number]
+  } {
     console.log('valid signals')
     let mostRecentTrades: [number, number][] = []
     const recentSignals = JSON.parse(dfSignals.to_json())
@@ -74,7 +88,13 @@ export class MainWorkflow {
       const signal = trade[1]
       console.log('%s %d', new Date(signalTimestamp).toLocaleString(), signal)
     }
+    return { mostRecentPosition, mostRecentTrade }
+  }
 
+  private async pushAlert(
+    mostRecentPosition: [string, number],
+    mostRecentTrade: [number, number]
+  ): Promise<void> {
     if (mostRecentPosition[1] !== 0) {
       const response = await fetch(`https://ntfy.sh/${priority}`, {
         method: 'POST',
@@ -92,11 +112,9 @@ export class MainWorkflow {
 
       console.log(await response.text())
     }
-
-    return true
   }
 
-  private newMethod(df: DataFrame): TestSet {
+  private backTest(df: DataFrame): TestSet {
     let testSet: TestSet | null = null
     if (cheatCode === null) {
       console.log('backtesting')
@@ -117,6 +135,15 @@ export class MainWorkflow {
   }
 }
 
+async function newFunction(e: unknown): Promise<void> {
+  const response = await fetch(`https://ntfy.sh/${priority}`, {
+    method: 'POST',
+    body: `error: ${e}`,
+    headers: { Priority: '4' },
+  })
+  console.log(response)
+}
+
 async function main(): Promise<void> {
   await loadPy()
   const injector = Injector.create({
@@ -135,20 +162,16 @@ async function main(): Promise<void> {
   const delay = (ms: number | undefined): Promise<unknown> =>
     new Promise(resolve => setTimeout(resolve, ms))
   while (success) {
-    console.log('waiting for next minute')
-    await delay(1000 * 60)
     try {
       const success = await mainWorkflow.run()
       if (!success) {
         throw new Error('something went wrong')
       }
+      console.log('waiting for next minute')
+      await delay(1000 * 60)
     } catch (e) {
       console.log(e)
-      const response = await fetch(`https://ntfy.sh/${priority}`, {
-        method: 'POST',
-        body: `error: ${e}`,
-        headers: { Priority: '4' },
-      })
+      await newFunction(e)
     }
   }
 

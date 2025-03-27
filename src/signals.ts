@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core'
 import { chart, util } from './pytrade'
 import { Strategy } from './strategy'
-import type { TestSet, DataFrame } from './types'
+import type { TestSet, DataFrame, Data } from './types'
 
 @Injectable({
   providedIn: 'root',
@@ -22,9 +22,15 @@ export class Signals {
    * @returns A tuple containing the DataFrame with the trading signals, a boolean indicating
    * if the DataFrame is valid, the profit for the quote asset, and the profit for the base asset.
    */
-  public generateSignals(ts: TestSet, df: DataFrame): [DataFrame, boolean, number, number] {
+  public generateSignals(ts: TestSet, df: DataFrame): [DataFrame, boolean, number, number] | null {
     // resample to 5 min
-    const df_ohlc = chart.ohlc(df, '5Min')
+    let df_ohlc: DataFrame | null = null
+    try {
+      df_ohlc = chart.ohlc(df, '5Min')
+    } catch (e) {
+      console.log(e)
+      return null
+    }
     // console.log("=========resampled=========")
     // console.log(df_ohlc.tail(1).to_csv())
 

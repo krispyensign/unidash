@@ -104,7 +104,8 @@ export class Strategy {
    * @param df_ohlc The input DataFrame containing the OHLC candlesticks.
    * @returns A DataFrame with the trading signals added.
    */
-  public wmaOhlcStrategy(ts: TestSet, df_ohlc: DataFrame): DataFrame {
+  public wmaOhlcStrategy(ts: TestSet, df: DataFrame): DataFrame {
+    let df_ohlc = df.reset_index()
     df_ohlc = indicator.wma(df_ohlc, 20, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, ts.signalColumnIn, 'WMA')
     return df_ohlc
@@ -123,7 +124,8 @@ export class Strategy {
    * @param df_ohlc The input DataFrame containing the OHLC candlesticks.
    * @returns A DataFrame with the trading signals added.
    */
-  public wmaOhlcInverseStrategy(ts: TestSet, df_ohlc: DataFrame): DataFrame {
+  public wmaOhlcInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
+    let df_ohlc = df.reset_index()
     df_ohlc = indicator.wma(df_ohlc, 20, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, 'WMA', ts.signalColumnIn)
     return df_ohlc
@@ -141,7 +143,8 @@ export class Strategy {
    * @param df_ohlc The input DataFrame containing the OHLC candlesticks.
    * @returns A DataFrame with the trading signals added.
    */
-  public iwmaOhlcStrategy(ts: TestSet, df_ohlc: DataFrame): DataFrame {
+  public iwmaOhlcStrategy(ts: TestSet, df: DataFrame): DataFrame {
+    let df_ohlc = df.reset_index()
     df_ohlc = indicator.iwma(df_ohlc, 20, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, ts.signalColumnIn, 'IWMA')
     return df_ohlc
@@ -161,7 +164,8 @@ export class Strategy {
    * @param df_ohlc The input DataFrame containing the OHLC candlesticks.
    * @returns A DataFrame with the trading signals added.
    */
-  public iwmaOhlcInverseStrategy(ts: TestSet, df_ohlc: DataFrame): DataFrame {
+  public iwmaOhlcInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
+    let df_ohlc = df.reset_index()
     df_ohlc = indicator.iwma(df_ohlc, 20, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, 'IWMA', ts.signalColumnIn)
     return df_ohlc
