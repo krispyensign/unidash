@@ -85,8 +85,7 @@ export class MainWorkflow {
     } else {
       const response = await fetch(`https://ntfy.sh/${heartbeat}`, {
         method: 'POST',
-        body: `heartbeat 
-          ${mostRecentTrade[1] === 1 ? 'buy' : 'sell'}
+        body: `heartbeat ${mostRecentTrade[1] === 1 ? 'buy' : 'sell'}
           ${new Date(mostRecentTrade[0])}`,
         headers: { Priority: '2' },
       })
