@@ -72,7 +72,7 @@ export class SwapHistoryService {
       const data: Data = await client.request(query)
 
       // break the loop if there are no more results
-      if (data.swaps.length === 0) {
+      if (data.swaps.length < batchSize) {
         break
       }
 
@@ -94,8 +94,10 @@ export class SwapHistoryService {
       k++
     }
 
+    // return what was already provided if no new swaps were found
     if (outData.length === 0) {
-      throw new Error('No data found')
+      console.log('no more swaps found')
+      return swaps
     }
 
     // save the data
@@ -103,11 +105,22 @@ export class SwapHistoryService {
     if (!isSaved) {
       throw new Error('Failed to save data')
     }
-
     console.log('swaps saved to db')
+
+    // append the new data to the existing data
     outData = swaps.concat(outData)
     outData.sort((a, b) => a.timestamp - b.timestamp)
 
+    // print the latest swap
+    const latestSwap = outData[outData.length - 1]
+    console.log(
+      'latest swap: %s %s %s',
+      latestSwap.swapId,
+      new Date(latestSwap.timestamp).toLocaleDateString(),
+      new Date(latestSwap.timestamp).toLocaleTimeString()
+    )
+
+    // return the data
     return outData
   }
 }

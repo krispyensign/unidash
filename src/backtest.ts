@@ -70,6 +70,7 @@ export class BacktestService {
         profit_results.push([ts, result, profitQuote, profitBase])
       }
     }
+    console.log('processed all test sets')
 
     // find maximum profit of profit_results
     let max_profit_quote = 0

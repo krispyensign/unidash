@@ -2,13 +2,14 @@
 
 ## The List
 
-- [ ] Log last X hours of positions / signals
-- [ ] Run using the accepted testcase
-- [ ] Push Alerting
-- [ ] Determine if it is needed to refactor or replace python / pandas service
-- [ ] Better logging
-- [ ] Does this need a workflow engine
+- [X] Log last X hours of positions / signals
+- [X] Run using the accepted testcase
+- [X] Push Alerting
 - [ ] Dashboard using plotly or D3
+- [ ] Better logging
+- [ ] Determine if it is needed to refactor or replace python / pandas service
+- [ ] Automated trading
+- [ ] Does this need a workflow engine
 - [ ] Rewrite services in .net and have plotting in typescript?
 
 ## Open Questions

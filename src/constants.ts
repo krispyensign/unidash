@@ -7,6 +7,7 @@ export type CheatCode = {
   testStrategy: TestStrategy
 }
 
+export const mostRecentTradeCount = 10
 export const dayInMS = 1000 * 60 * 60 * 24
 export const daysBack = 60
 export const mongodbURI =
@@ -45,7 +46,7 @@ export const points = [
   // 'ha_ask_close',
   // 'ha_ask_high',
   // 'ha_ask_low',
-  'ask_open',
+  // 'ask_open',
   // 'ask_close',
   // 'ask_high',
   // 'ask_low',
@@ -56,8 +57,8 @@ export const points = [
 ]
 
 export const strategies: TestStrategy[] = [
-  'IWMA_HEIKEN_ASHI_INVERSE',
-  'IWMA_HEIKEN_ASHI',
+  // 'IWMA_HEIKEN_ASHI_INVERSE',
+  // 'IWMA_HEIKEN_ASHI',
   'WMA_HEIKEN_ASHI',
-  'WMA_HEIKEN_ASHI_INVERSE',
+  // 'WMA_HEIKEN_ASHI_INVERSE',
 ]
