@@ -135,7 +135,7 @@ export class MainWorkflow {
   }
 }
 
-async function newFunction(e: unknown): Promise<void> {
+async function pushAlertError(e: unknown): Promise<void> {
   const response = await fetch(`https://ntfy.sh/${priority}`, {
     method: 'POST',
     body: `error: ${e}`,
@@ -171,7 +171,7 @@ async function main(): Promise<void> {
       await delay(1000 * 60)
     } catch (e) {
       console.log(e)
-      await newFunction(e)
+      await pushAlertError(e)
     }
   }
 
