@@ -31,8 +31,6 @@ export class Signals {
       console.log(e)
       return null
     }
-    // console.log("=========resampled=========")
-    // console.log(df_ohlc.tail(1).to_csv())
 
     let df_ha: DataFrame
     switch (ts.testStrategy) {
@@ -64,8 +62,6 @@ export class Signals {
 
     // portfolio calculation
     const [portfolio, isValid, profitQuote, profitBase] = util.portfolio(df_ha)
-    // console.log("=========portfolio=========")
-    // console.log(portfolio.tail(1).to_csv())
 
     // return the portfolio and profit
     return [portfolio, isValid, profitQuote, profitBase]

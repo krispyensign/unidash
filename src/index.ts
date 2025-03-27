@@ -8,6 +8,7 @@ import { Strategy } from './strategy'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
 import { priority, heartbeat, tokenIn0, tokenIn1 } from './private.json'
+import { colorize } from 'json-colorizer'
 
 @Injectable({
   providedIn: 'root',
@@ -35,60 +36,38 @@ export class MainWorkflow {
   }
 
   public async run(): Promise<boolean> {
+    // get swap history
     const allSwaps = await this.GetSwapHistory(tokenIn0 as Token, tokenIn1 as Token)
     if (allSwaps.length === 0) {
       console.log('no swaps found')
       return false
     }
 
+    // load dataframe
     const df = await loadDataFrame(JSON.stringify(allSwaps))
 
+    // backtest
     const testSet: TestSet = this.backTest(df)
 
+    // generate signals
     const result = this.signalService.generateSignals(testSet, df)
     if (result === null) {
       throw new Error('invalid signals')
     }
+
+    // log mostRecentTrade and then fail if invalid
     const [dfSignals, valid] = result
+    console.log(colorize(dfSignals.tail(1).to_json()))
+    const { mostRecentPosition, mostRecentTrade } =
+      this.backtestService.getMostRecentTrades(dfSignals)
     if (!valid) {
       throw new Error('invalid signals')
     }
 
-    const { mostRecentPosition, mostRecentTrade } = this.getMostRecentTrades(dfSignals)
-
+    // push alert if there is a trade
     await this.pushAlert(mostRecentPosition, mostRecentTrade)
 
     return true
-  }
-
-  private getMostRecentTrades(dfSignals: DataFrame): {
-    mostRecentPosition: [string, number]
-    mostRecentTrade: [number, number]
-  } {
-    console.log('valid signals')
-    let mostRecentTrades: [number, number][] = []
-    const recentSignals = JSON.parse(dfSignals.to_json())
-    const positionRows: [string, number][] = Object.entries(recentSignals['position'])
-    const mostRecentPosition = positionRows[positionRows.length - 1]
-    for (const signal of positionRows) {
-      if (signal[1] === 0) {
-        continue
-      }
-      mostRecentTrades = mostRecentTrades.concat([[parseInt(signal[0]), signal[1] as number]])
-    }
-    const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
-
-    for (let i = 0; i < mostRecentTradeCount; i++) {
-      if (i >= mostRecentTrades.length) {
-        break
-      }
-      const trade = mostRecentTrades[mostRecentTrades.length - 1 - i]
-
-      const signalTimestamp = trade[0]
-      const signal = trade[1]
-      console.log('%s %d', new Date(signalTimestamp).toLocaleString(), signal)
-    }
-    return { mostRecentPosition, mostRecentTrade }
   }
 
   private async pushAlert(
@@ -171,7 +150,8 @@ async function main(): Promise<void> {
       await delay(1000 * 60)
     } catch (e) {
       console.log(e)
-      await pushAlertError(e)
+      // await pushAlertError(e)
+      break
     }
   }
 

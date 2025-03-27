@@ -1,6 +1,5 @@
 import { colorize } from 'json-colorizer'
-import { Strategy } from './strategy'
-import type { TestStrategy, DataFrame, TestSet } from './types'
+import type { DataFrame, TestSet } from './types'
 import { points, strategies } from './constants'
 import { Injectable } from '@angular/core'
 import { Signals } from './signals'
@@ -19,20 +18,34 @@ export class BacktestService {
     this.signals = signals
   }
 
-  /**
-   * Performs backtesting on a DataFrame using a variety of strategies and signal points.
-   *
-   * This function generates all possible test sets by iterating over predefined signal
-   * points, WMA points, and strategies. It filters out invalid test sets where the strategy
-   * requires Heiken-Ashi columns but the input columns do not match. For each valid test set,
-   * it runs the signal generation process and collects the results that yield positive profits
-   * in either quote or base currency. It then identifies and logs the test set and results
-   * with the maximum profit for both quote and base currencies.
-   *
-   * @param df The input DataFrame containing trading data to be used for backtesting.  The columns
-   * expected in the dataframe are timestamp, amount0, and amount1
-   */
-  public backTest(df: DataFrame): [TestSet, DataFrame] | undefined {
+  public getMostRecentTrades(dfSignals: DataFrame): {
+    mostRecentPosition: [string, number]
+    mostRecentTrade: [number, number]
+  } {
+    let mostRecentTrades: [number, number][] = []
+    const recentSignals = JSON.parse(dfSignals.to_json())
+    const positionRows: [string, number][] = Object.entries(recentSignals['position'])
+    const mostRecentPosition = positionRows[positionRows.length - 1]
+    for (const signal of positionRows) {
+      if (signal[1] === 0) {
+        continue
+      }
+      mostRecentTrades = mostRecentTrades.concat([[parseInt(signal[0]), signal[1] as number]])
+    }
+    const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
+
+    for (let i = 0; i < mostRecentTrades.length; i++) {
+      const trade = mostRecentTrades[mostRecentTrades.length - 1 - i]
+
+      const signalTimestamp = trade[0]
+      const signal = trade[1]
+      console.log('%s %d', new Date(signalTimestamp).toLocaleString(), signal)
+    }
+
+    return { mostRecentPosition, mostRecentTrade }
+  }
+
+  public backTest(df: DataFrame): [TestSet, DataFrame] | null {
     // generate all possible test sets
     const testSets: TestSet[] = []
     for (const signalPoint of points) {
@@ -42,10 +55,13 @@ export class BacktestService {
           if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
             continue
           }
+
+          // skip test set if strategy is OHLC and input is not OHLC columns
           if (strategy.includes('OHLC') && input_is_ha(signalPoint, wmaPoint)) {
             continue
           }
 
+          // create test set
           const testSet: TestSet = {
             signalColumnIn: signalPoint,
             wmaColumnIn: wmaPoint,
@@ -61,6 +77,8 @@ export class BacktestService {
     const profit_results: [TestSet, DataFrame, number, number][] = []
     for (const ts of testSets) {
       k++
+
+      // generate signals
       let genResult: [DataFrame, boolean, number, number] | null
       try {
         genResult = this.signals.generateSignals(ts, df)
@@ -75,63 +93,70 @@ export class BacktestService {
       }
       const [result, isValid, profitQuote, profitBase] = genResult
 
+      // collect results
       if (profitQuote > 0 && isValid) {
         profit_results.push([ts, result, profitQuote, profitBase])
       } else if (profitBase > 0 && isValid) {
         profit_results.push([ts, result, profitQuote, profitBase])
       }
+
+      // log progress
       if (k % 10 === 0) {
-        console.log(
-          `processed ${k} of ${testSets.length} test sets. ${profit_results.length} valid signals`
-        )
-        console.log(`last test set: ${colorize(ts)} ${colorize(result.tail(1).to_json())}`)
+        this.logProgress(k, testSets.length, profit_results.length, ts, result)
       }
     }
     console.log('processed all test sets')
 
     // find maximum profit of profit_results
+    const profitResult = this.findMaxProfit(profit_results)
+    if (!profitResult) {
+      console.log('no valid signals found')
+      return null
+    }
+    const [max_profit_quote_ts, max_result] = profitResult
+
+    return [max_profit_quote_ts, max_result]
+  }
+
+  private findMaxProfit(
+    profit_results: [TestSet, DataFrame, number, number][]
+  ): [TestSet, DataFrame] | null {
     let max_profit_quote = 0
     let max_profit_quote_ts: TestSet | undefined
-    let max_result_quote: DataFrame | undefined
+    let max_result: DataFrame | undefined
     for (const [ts, result, profitQuote] of profit_results) {
       if (profitQuote > max_profit_quote) {
         max_profit_quote = profitQuote
         max_profit_quote_ts = ts
-        max_result_quote = result
+        max_result = result
       }
     }
-
     if (max_profit_quote_ts) {
       console.log('=============================================')
       console.log(`max profit quote: ${max_profit_quote}`)
       console.log(colorize(max_profit_quote_ts))
-      console.log(colorize(max_result_quote!.tail(1).to_json()))
+      console.log(colorize(max_result!.tail(1).to_json()))
       console.log('=============================================')
     }
 
-    let max_profit_base = 0
-    let max_profit_base_ts: TestSet | undefined
-    let max_result_base: DataFrame | undefined
-    for (const [ts, result, , profitBase] of profit_results) {
-      if (profitBase > max_profit_base) {
-        max_profit_base = profitBase
-        max_profit_base_ts = ts
-        max_result_base = result
-      }
+    if (!max_profit_quote_ts || !max_result) {
+      return null
     }
 
-    if (max_profit_base_ts) {
-      console.log('=============================================')
-      console.log(`max profit base: ${max_profit_base}`)
-      console.log(colorize(max_profit_base_ts))
-      console.log(colorize(max_result_base!.tail(1).to_json()))
-      console.log('=============================================')
-    }
+    return [max_profit_quote_ts, max_result]
+  }
 
-    if (!max_profit_quote_ts || !max_result_quote) {
-      return undefined
-    }
-
-    return [max_profit_quote_ts, max_result_quote]
+  private logProgress(
+    k: number,
+    testSetLength: number,
+    profitResultsLength: number,
+    ts: TestSet,
+    result: DataFrame
+  ): void {
+    console.log(
+      `processed ${k} of ${testSetLength} test sets. ${profitResultsLength} valid signals`
+    )
+    console.log(`last test set: ${colorize(ts)} ${colorize(result.tail(1).to_json())}`)
+    this.getMostRecentTrades(result)
   }
 }

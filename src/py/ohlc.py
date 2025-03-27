@@ -28,21 +28,23 @@ def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min") -> pandas.DataFrame:
 
     df["price"] = abs(df["amount1"] / df["amount0"])
 
-    # if amount 0 is negative, then it is a buy so calculate the ask price
+    # if amount0 is negative, then it is a buy so calculate the ask price
     # i.e. buy ETH sell BOBO
     # i.e. ETH = 0.15307 BOBO = 1040599933.89 price per ETH = 6,798,196,471.483635 BOBO
     df["ask_price"] = abs(df["amount1"] / df["amount0"]).where(df["amount0"] < 0)
 
-    # if amount 0 is positive, then it is a sell so calculate the bid price
+    # if amount0 is positive, then it is a sell so calculate the bid price
     # i.e. sell ETH buy BOBO
     # i.e. ETH = 0.19187 BOBO = 1280811348.79 price per ETH = 6,675,412,251.993537 BOBO
     df["bid_price"] = abs(df["amount1"] / df["amount0"]).where(df["amount0"] > 0)
+
+    df["mid_price"] = (df["bid_price"] + df["ask_price"]) / 2
 
     del df["amount0"]
     del df["amount1"]
 
     # resample to 5 minute intervals
-    df_p = df["price"].resample(timeFrame).ohlc()
+    df_p = df["mid_price"].resample(timeFrame).ohlc()
     df_p.ffill(inplace=True)
 
     df_b = df["bid_price"].resample(timeFrame).ohlc()
