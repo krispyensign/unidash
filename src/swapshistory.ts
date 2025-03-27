@@ -71,11 +71,6 @@ export class SwapHistoryService {
       // make the graphql request
       const data: Data = await client.request(query)
 
-      // break the loop if there are no more results
-      if (data.swaps.length < batchSize) {
-        break
-      }
-
       // aggregate the results
       outData = outData.concat(
         data.swaps.map((swap: RawSwap) => {
@@ -89,6 +84,11 @@ export class SwapHistoryService {
           }
         })
       )
+
+      // break the loop if there are no more results
+      if (data.swaps.length < batchSize) {
+        break
+      }
 
       // increment the offset for the next request
       k++

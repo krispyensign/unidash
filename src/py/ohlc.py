@@ -26,8 +26,6 @@ def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min") -> pandas.DataFrame:
 
     df = dataIn.copy()
 
-    df["price"] = abs(df["amount1"] / df["amount0"])
-
     # if amount0 is negative, then it is a buy so calculate the ask price
     # i.e. buy ETH sell BOBO
     # i.e. ETH = 0.15307 BOBO = 1040599933.89 price per ETH = 6,798,196,471.483635 BOBO
@@ -38,6 +36,7 @@ def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min") -> pandas.DataFrame:
     # i.e. ETH = 0.19187 BOBO = 1280811348.79 price per ETH = 6,675,412,251.993537 BOBO
     df["bid_price"] = abs(df["amount1"] / df["amount0"]).where(df["amount0"] > 0)
 
+    df.ffill(inplace=True)
     df["mid_price"] = (df["bid_price"] + df["ask_price"]) / 2
 
     del df["amount0"]

@@ -1,130 +1,20 @@
-import { loadDataFrame, loadPy } from './pytrade'
+import { loadPy } from './pytrade'
 import { SwapHistoryService } from './swapshistory'
 import { DbService } from './db'
-import { Injectable, Injector } from '@angular/core'
-import { DataFrame, Swap, TestSet, Token } from './types'
-import { cheatCode, dayInMS, daysBack, mostRecentTradeCount } from './constants'
+import { Injector } from '@angular/core'
 import { Strategy } from './strategy'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
-import { priority, heartbeat, tokenIn0, tokenIn1 } from './private.json'
-import { colorize } from 'json-colorizer'
+import { MainWorkflow } from './main'
 
-@Injectable({
-  providedIn: 'root',
-})
-export class MainWorkflow {
-  swapService: SwapHistoryService
-  signalService: Signals
-  backtestService: BacktestService
-  constructor(
-    swapService: SwapHistoryService,
-    signalService: Signals,
-    backtestService: BacktestService
-  ) {
-    this.swapService = swapService
-    this.signalService = signalService
-    this.backtestService = backtestService
-  }
-
-  public async GetSwapHistory(token0: Token, token1: Token): Promise<Swap[]> {
-    const starterTimestamp = new Date(new Date().setUTCHours(0, 0, 0, 1) - dayInMS * daysBack)
-
-    const swaps = await this.swapService.GetSwapsSince(token0, token1, starterTimestamp)
-
-    return swaps
-  }
-
-  public async run(): Promise<boolean> {
-    // get swap history
-    const allSwaps = await this.GetSwapHistory(tokenIn0 as Token, tokenIn1 as Token)
-    if (allSwaps.length === 0) {
-      console.log('no swaps found')
-      return false
-    }
-
-    // load dataframe
-    const df = await loadDataFrame(JSON.stringify(allSwaps))
-
-    // backtest
-    const testSet: TestSet = this.backTest(df)
-
-    // generate signals
-    const result = this.signalService.generateSignals(testSet, df)
-    if (result === null) {
-      throw new Error('invalid signals')
-    }
-
-    // log mostRecentTrade and then fail if invalid
-    const [dfSignals, valid] = result
-    console.log(colorize(dfSignals.tail(1).to_json()))
-    const { mostRecentPosition, mostRecentTrade } =
-      this.backtestService.getMostRecentTrades(dfSignals)
-    if (!valid) {
-      throw new Error('invalid signals')
-    }
-
-    // push alert if there is a trade
-    await this.pushAlert(mostRecentPosition, mostRecentTrade)
-
-    return true
-  }
-
-  private async pushAlert(
-    mostRecentPosition: [string, number],
-    mostRecentTrade: [number, number]
-  ): Promise<void> {
-    if (mostRecentPosition[1] !== 0) {
-      const response = await fetch(`https://ntfy.sh/${priority}`, {
-        method: 'POST',
-        body: `${mostRecentTrade[1] === 1 ? 'buy' : 'sell'} ${new Date(mostRecentTrade[0])}`,
-        headers: { Priority: '5' },
-      })
-      console.log(await response.text())
-    } else {
-      const response = await fetch(`https://ntfy.sh/${heartbeat}`, {
-        method: 'POST',
-        body: `heartbeat ${mostRecentTrade[1] === 1 ? 'buy' : 'sell'}
-          ${new Date(mostRecentTrade[0])}`,
-        headers: { Priority: '2' },
-      })
-
-      console.log(await response.text())
-    }
-  }
-
-  private backTest(df: DataFrame): TestSet {
-    let testSet: TestSet | null = null
-    if (cheatCode === null) {
-      console.log('backtesting')
-      const result = this.backtestService.backTest(df)
-      if (!result || result[0] === null) {
-        throw new Error('no valid test sets')
-      }
-
-      testSet = result[0]
-    } else {
-      testSet = {
-        signalColumnIn: cheatCode.signalColumnIn,
-        wmaColumnIn: cheatCode.wmaColumnIn,
-        testStrategy: cheatCode.testStrategy,
-      }
-    }
-    return testSet
-  }
-}
-
-async function pushAlertError(e: unknown): Promise<void> {
-  const response = await fetch(`https://ntfy.sh/${priority}`, {
-    method: 'POST',
-    body: `error: ${e}`,
-    headers: { Priority: '4' },
-  })
-  console.log(response)
-}
+const delay = (ms: number | undefined): Promise<unknown> =>
+  new Promise(resolve => setTimeout(resolve, ms))
 
 async function main(): Promise<void> {
+  // load python environment
   await loadPy()
+
+  // setup dep injections
   const injector = Injector.create({
     providers: [
       { provide: DbService, deps: [] },
@@ -136,26 +26,29 @@ async function main(): Promise<void> {
     ],
   })
 
+  // get the main workflow
   const mainWorkflow = injector.get(MainWorkflow)
+
+  // start the main poller
   const success = true
-  const delay = (ms: number | undefined): Promise<unknown> =>
-    new Promise(resolve => setTimeout(resolve, ms))
   while (success) {
     try {
+      // run the program
       const success = await mainWorkflow.run()
       if (!success) {
         throw new Error('something went wrong')
       }
+
+      // wait till the next run
       console.log('waiting for next minute')
       await delay(1000 * 60)
     } catch (e) {
+      // alert for errors
       console.log(e)
       // await pushAlertError(e)
       break
     }
   }
-
-  console.log('done')
 }
 
 main().finally(() => process.exit(0))
