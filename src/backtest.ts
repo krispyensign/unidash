@@ -24,22 +24,28 @@ export class BacktestService {
   } {
     let mostRecentTrades: [number, number][] = []
     const recentSignals = JSON.parse(dfSignals.to_json())
-    const positionRows: [string, number][] = Object.entries(recentSignals['position'])
-    const mostRecentPosition = positionRows[positionRows.length - 1]
+    const positionRows: [string, number | null][] = Object.entries(recentSignals['position'])
+
+    // get most recent position
+    const mostRecentPosition: [string, number] = positionRows[positionRows.length - 1] as [
+      string,
+      number,
+    ]
     for (const signal of positionRows) {
-      if (signal[1] === 0) {
+      if (signal[1] === 0 || signal[1] === null) {
         continue
       }
       mostRecentTrades = mostRecentTrades.concat([[parseInt(signal[0]), signal[1] as number]])
     }
     const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
 
-    for (let i = 0; i < mostRecentTrades.length; i++) {
+    // print most recent trades
+    for (let i = 0; i < 5; i++) {
+      if (i >= mostRecentTrades.length) {
+        break
+      }
       const trade = mostRecentTrades[mostRecentTrades.length - 1 - i]
-
-      const signalTimestamp = trade[0]
-      const signal = trade[1]
-      console.log('%s %d', new Date(signalTimestamp).toLocaleString(), signal)
+      console.log('%s %d', new Date(trade[0]).toLocaleString(), trade[1])
     }
 
     return { mostRecentPosition, mostRecentTrade }

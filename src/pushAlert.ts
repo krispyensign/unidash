@@ -13,7 +13,7 @@ export async function pushAlert(
   mostRecentPosition: [string, number],
   mostRecentTrade: [number, number]
 ): Promise<void> {
-  if (mostRecentPosition[1] !== 0) {
+  if (mostRecentPosition[1] === 1 || mostRecentPosition[1] === -1) {
     const response = await fetch(`https://ntfy.sh/${priority}`, {
       method: 'POST',
       body: `${mostRecentTrade[1] === 1 ? 'buy' : 'sell'} ${new Date(mostRecentTrade[0])}`,
