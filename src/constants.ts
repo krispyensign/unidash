@@ -19,7 +19,7 @@ export const graphqlEndpoint = `https://gateway.thegraph.com/api/${apiKey}/subgr
 // export const cheatCode: CheatCode | null = null
 
 export const cheatCode: CheatCode | null = {
-  wmaColumnIn: 'open',
+  wmaColumnIn: 'ha_open',
   signalColumnIn: 'ha_open',
   testStrategy: 'WMA_HEIKEN_ASHI_INVERSE',
 }

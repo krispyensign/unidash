@@ -49,6 +49,7 @@ export class MainWorkflow {
     const testSet: TestSet = this.backTest(df)
 
     // generate signals
+    console.log('generating signals for test set %s', colorize(testSet))
     const result = this.signalService.generateSignals(testSet, df)
     if (result === null) {
       throw new Error('invalid signals')
