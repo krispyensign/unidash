@@ -6,9 +6,7 @@ import { Strategy } from './strategy'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
 import { MainWorkflow } from './main'
-
-const delay = (ms: number | undefined): Promise<unknown> =>
-  new Promise(resolve => setTimeout(resolve, ms))
+import { pushAlertError } from './pushAlert'
 
 async function main(): Promise<void> {
   // load python environment
@@ -29,25 +27,16 @@ async function main(): Promise<void> {
   // get the main workflow
   const mainWorkflow = injector.get(MainWorkflow)
 
-  // start the main poller
-  const success = true
-  while (success) {
-    try {
-      // run the program
-      const success = await mainWorkflow.run()
-      if (!success) {
-        throw new Error('something went wrong')
-      }
-
-      // wait till the next run
-      console.log('waiting for next minute')
-      await delay(1000 * 60)
-    } catch (e) {
-      // alert for errors
-      console.log(e)
-      // await pushAlertError(e)
-      break
+  try {
+    // run the program
+    const success = await mainWorkflow.run()
+    if (!success) {
+      throw new Error('something went wrong')
     }
+  } catch (e) {
+    // alert for errors
+    console.log(e)
+    await pushAlertError(e)
   }
 }
 

@@ -45,17 +45,17 @@ export class MainWorkflow {
     // load dataframe
     const df = await loadDataFrame(JSON.stringify(allSwaps))
 
-    // backtest
+    // backtest unless a test set has already been pre-selected
     const testSet: TestSet = this.backTest(df)
 
-    // generate signals
+    // generate signals from the selected test set
     console.log('generating signals for test set %s', colorize(testSet))
     const result = this.signalService.generateSignals(testSet, df)
     if (result === null) {
       throw new Error('invalid signals')
     }
 
-    // log mostRecentTrade and then fail if invalid
+    // check the result, get the most recent trades and perform any push alerts
     const [dfSignals, valid] = result
     console.log(colorize(dfSignals.tail(1).to_json()))
     const { mostRecentPosition, mostRecentTrade } =
@@ -87,6 +87,7 @@ export class MainWorkflow {
         testStrategy: cheatCode.testStrategy,
       }
     }
+
     return testSet
   }
 }
