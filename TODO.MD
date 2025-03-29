@@ -5,9 +5,11 @@
 - [X] Log last X hours of positions / signals
 - [X] Run using the accepted testcase
 - [X] Push Alerting
+- [X] Configs
 - [ ] Dashboard using plotly or D3
-- [ ] Better logging
+- [ ] Change to using bigint instead of float
 - [ ] Determine if it is needed to refactor or replace python / pandas service
+- [ ] Better logging
 - [ ] Automated trading
 - [ ] Does this need a workflow engine
 - [ ] Rewrite services in .net and have plotting in typescript?

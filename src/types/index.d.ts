@@ -64,9 +64,7 @@ export type ColumnNames =
   | 'bid_high'
   | 'bid_low'
 
-export type Token =
-  | '0x4200000000000000000000000000000000000006'
-  | '0x570b1533F6dAa82814B25B62B5c7c4c55eB83947'
+export type Token = string
 
 export type TestSet = {
   signalColumnIn: string
@@ -131,3 +129,17 @@ export type PythonFunc =
   | signalCompareFunc
   | heikenFunc
   | portfolioFunc
+
+export interface Arguments {
+  [x: string]: unknown
+  token0: string
+  token1: string
+  graphqlEndpoint: string
+  mongodbEndpoint: string
+  daysToFetch: number
+  heartbeat: string | undefined
+  priority: string | undefined
+  strategyWmaColumn: string | undefined
+  strategySignalColumn: string | undefined
+  strategyName: string | undefined
+}

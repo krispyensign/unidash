@@ -1,13 +1,13 @@
 import { loadDataFrame } from './pytrade'
 import { SwapHistoryService } from './swapshistory'
-import { Injectable } from '@angular/core'
-import { DataFrame, Swap, TestSet, Token } from './types'
-import { cheatCode, dayInMS, daysBack } from './constants'
+import { Inject, Injectable } from '@angular/core'
+import type { Arguments, DataFrame, Swap, TestSet, TestStrategy, Token } from './types'
+import { dayInMS } from './constants'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
-import { tokenIn0, tokenIn1 } from './private.json'
 import { colorize } from 'json-colorizer'
-import { pushAlert } from './pushAlert'
+import { ConfigToken } from './config'
+import { PushAlertService } from './pushAlert'
 
 @Injectable({
   providedIn: 'root',
@@ -16,27 +16,29 @@ export class MainWorkflow {
   swapService: SwapHistoryService
   signalService: Signals
   backtestService: BacktestService
+  config: Arguments
+  pushAlertService: PushAlertService
+
   constructor(
     swapService: SwapHistoryService,
     signalService: Signals,
-    backtestService: BacktestService
+    backtestService: BacktestService,
+    pushAlertService: PushAlertService,
+    @Inject(ConfigToken) config: Arguments
   ) {
     this.swapService = swapService
     this.signalService = signalService
     this.backtestService = backtestService
-  }
-
-  public async GetSwapHistory(token0: Token, token1: Token): Promise<Swap[]> {
-    const starterTimestamp = new Date(new Date().setUTCHours(0, 0, 0, 1) - dayInMS * daysBack)
-
-    const swaps = await this.swapService.GetSwapsSince(token0, token1, starterTimestamp)
-
-    return swaps
+    this.pushAlertService = pushAlertService
+    this.config = config
   }
 
   public async run(): Promise<boolean> {
     // get swap history
-    const allSwaps = await this.GetSwapHistory(tokenIn0 as Token, tokenIn1 as Token)
+    const allSwaps = await this.GetSwapHistory(
+      this.config.token0 as Token,
+      this.config.token1 as Token
+    )
     if (allSwaps.length === 0) {
       console.log('no swaps found')
       return false
@@ -59,20 +61,35 @@ export class MainWorkflow {
     const [dfSignals, valid] = result
     console.log(colorize(dfSignals.tail(1).to_json()))
     const { mostRecentPosition, mostRecentTrade } =
-      this.backtestService.getMostRecentTrades(dfSignals)
+      this.signalService.getMostRecentTrades(dfSignals)
     if (!valid) {
       throw new Error('invalid signals')
     }
 
-    // push alert if there is a trade
-    await pushAlert(mostRecentPosition, mostRecentTrade)
+    // push either a heartbeat or an alert
+    const pushDirection = mostRecentTrade[1] === 1 ? 'Buy' : 'Sell'
+    if (mostRecentPosition[1] in [1, -1]) {
+      await this.pushAlertService.pushAlert(pushDirection, mostRecentPosition[0])
+    } else {
+      await this.pushAlertService.pushHeartbeat(pushDirection, mostRecentTrade[0])
+    }
 
     return true
   }
 
+  public async GetSwapHistory(token0: Token, token1: Token): Promise<Swap[]> {
+    const starterTimestamp = new Date(
+      new Date().setUTCHours(0, 0, 0, 1) - dayInMS * this.config.daysToFetch
+    )
+
+    const swaps = await this.swapService.GetSwapsSince(token0, token1, starterTimestamp)
+
+    return swaps
+  }
+
   private backTest(df: DataFrame): TestSet {
     let testSet: TestSet | null = null
-    if (cheatCode === null) {
+    if (this.config.strategyName === undefined) {
       console.log('backtesting')
       const result = this.backtestService.backTest(df)
       if (!result || result[0] === null) {
@@ -81,10 +98,18 @@ export class MainWorkflow {
 
       testSet = result[0]
     } else {
+      console.log('using pre-selected test set')
+      if (
+        this.config.strategySignalColumn === undefined ||
+        this.config.strategyWmaColumn === undefined ||
+        this.config.strategyName === undefined
+      ) {
+        throw new Error('invalid test set')
+      }
       testSet = {
-        signalColumnIn: cheatCode.signalColumnIn,
-        wmaColumnIn: cheatCode.wmaColumnIn,
-        testStrategy: cheatCode.testStrategy,
+        signalColumnIn: this.config.strategySignalColumn,
+        wmaColumnIn: this.config.strategyWmaColumn,
+        testStrategy: this.config.strategyName as TestStrategy,
       }
     }
 

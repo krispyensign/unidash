@@ -18,39 +18,6 @@ export class BacktestService {
     this.signals = signals
   }
 
-  public getMostRecentTrades(dfSignals: DataFrame): {
-    mostRecentPosition: [string, number]
-    mostRecentTrade: [number, number]
-  } {
-    let mostRecentTrades: [number, number][] = []
-    const recentSignals = JSON.parse(dfSignals.to_json())
-    const positionRows: [string, number | null][] = Object.entries(recentSignals['position'])
-
-    // get most recent position
-    const mostRecentPosition: [string, number] = positionRows[positionRows.length - 1] as [
-      string,
-      number,
-    ]
-    for (const signal of positionRows) {
-      if (signal[1] === 0 || signal[1] === null) {
-        continue
-      }
-      mostRecentTrades = mostRecentTrades.concat([[parseInt(signal[0]), signal[1] as number]])
-    }
-    const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
-
-    // print most recent trades
-    for (let i = 0; i < 5; i++) {
-      if (i >= mostRecentTrades.length) {
-        break
-      }
-      const trade = mostRecentTrades[mostRecentTrades.length - 1 - i]
-      console.log('%s %d', new Date(trade[0]).toLocaleString(), trade[1])
-    }
-
-    return { mostRecentPosition, mostRecentTrade }
-  }
-
   public backTest(df: DataFrame): [TestSet, DataFrame] | null {
     // generate all possible test sets
     const testSets: TestSet[] = []
@@ -163,6 +130,6 @@ export class BacktestService {
       `processed ${k} of ${testSetLength} test sets. ${profitResultsLength} valid signals`
     )
     console.log(`last test set: ${colorize(ts)} ${colorize(result.tail(1).to_json())}`)
-    this.getMostRecentTrades(result)
+    this.signals.getMostRecentTrades(result)
   }
 }

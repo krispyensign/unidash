@@ -1,31 +1,56 @@
-import { priority, heartbeat } from './private.json'
+import { Inject, Injectable } from '@angular/core'
+import { ConfigToken } from './config'
+import { Arguments } from './types'
 
-export async function pushAlertError(e: unknown): Promise<void> {
-  const response = await fetch(`https://ntfy.sh/${priority}`, {
-    method: 'POST',
-    body: `error: ${e}`,
-    headers: { Priority: '4' },
-  })
-  console.log(response)
-}
+@Injectable({
+  providedIn: 'root',
+})
+export class PushAlertService {
+  private priority: string | undefined
+  private heartbeat: string | undefined
 
-export async function pushAlert(
-  mostRecentPosition: [string, number],
-  mostRecentTrade: [number, number]
-): Promise<void> {
-  if (mostRecentPosition[1] === 1 || mostRecentPosition[1] === -1) {
-    const response = await fetch(`https://ntfy.sh/${priority}`, {
+  constructor(@Inject(ConfigToken) config: Arguments) {
+    this.priority = config.priority
+    this.heartbeat = config.heartbeat
+  }
+
+  public async pushAlertError(e: unknown): Promise<void> {
+    if (!this.priority) return
+
+    const response = await fetch(`https://ntfy.sh/${this.priority}`, {
       method: 'POST',
-      body: `${mostRecentTrade[1] === 1 ? 'buy' : 'sell'} ${new Date(mostRecentTrade[0])}`,
-      headers: { Priority: '5' },
+      body: `error: ${e}`,
+      headers: { Priority: '4' },
     })
-    console.log(await response.text())
-  } else {
-    const response = await fetch(`https://ntfy.sh/${heartbeat}`, {
+    console.log(response)
+  }
+
+  public async pushHeartbeat(
+    mostRecentAction: string,
+    mostRecentTradeTimestamp: number
+  ): Promise<void> {
+    if (!this.heartbeat) return
+
+    const response = await fetch(`https://ntfy.sh/${this.heartbeat}`, {
       method: 'POST',
-      body: `heartbeat ${mostRecentTrade[1] === 1 ? 'buy' : 'sell'}
-          ${new Date(mostRecentTrade[0])}`,
+      body: `heartbeat ${mostRecentAction}
+          ${new Date(mostRecentTradeTimestamp)}`,
       headers: { Priority: '2' },
+    })
+
+    console.log(await response.text())
+  }
+
+  public async pushAlert(
+    mostRecentAction: string,
+    mostRecentTradeTimestamp: string
+  ): Promise<void> {
+    if (!this.priority) return
+
+    const response = await fetch(`https://ntfy.sh/${this.priority}`, {
+      method: 'POST',
+      body: `${mostRecentAction} ${new Date(mostRecentTradeTimestamp)}`,
+      headers: { Priority: '5' },
     })
 
     console.log(await response.text())

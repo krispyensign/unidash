@@ -16,3 +16,4 @@ private.json
 .ruff_cache/
 .venv/
 .cache/
+config.json

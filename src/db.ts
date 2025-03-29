@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core'
+import { Inject, Injectable } from '@angular/core'
 import { InsertManyResult, MongoBulkWriteError, MongoClient } from 'mongodb'
-import { Swap } from './types'
-import { mongodbURI } from './constants'
+import { Swap, Arguments } from './types'
+import { ConfigToken } from './config'
 
 @Injectable({
   providedIn: 'root',
@@ -9,8 +9,8 @@ import { mongodbURI } from './constants'
 export class DbService {
   client: MongoClient
 
-  constructor() {
-    this.client = new MongoClient(mongodbURI)
+  constructor(@Inject(ConfigToken) config: Arguments) {
+    this.client = new MongoClient(config.mongodbEndpoint)
   }
 
   public async getSwapsSince(date: Date, token0: string, token1: string): Promise<Swap[]> {

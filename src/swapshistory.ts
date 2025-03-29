@@ -1,19 +1,21 @@
 // Define the GraphQL endpoint for the Uniswap subgraph v3
 import { GraphQLClient, gql } from 'graphql-request'
-import type { Swap, Data, RawSwap } from './types'
+import type { Swap, Data, RawSwap, Arguments } from './types'
 import type { Token } from './types'
-import { Injectable } from '@angular/core'
+import { Inject, Injectable } from '@angular/core'
 import { DbService } from './db'
-import { graphqlEndpoint } from './constants'
+import { ConfigToken } from './config'
 
 @Injectable({
   providedIn: 'root',
 })
 export class SwapHistoryService {
   dbService: DbService
+  graphqlEndpoint: string
 
-  constructor(dbService: DbService) {
+  constructor(dbService: DbService, @Inject(ConfigToken) config: Arguments) {
     this.dbService = dbService
+    this.graphqlEndpoint = config.graphqlEndpoint
   }
 
   public async GetSwapsSince(
@@ -40,7 +42,7 @@ export class SwapHistoryService {
     }
 
     // create a graphql client
-    const client = new GraphQLClient(graphqlEndpoint)
+    const client = new GraphQLClient(this.graphqlEndpoint)
 
     // get swaps in k batches of batchSize
     let k = 0
