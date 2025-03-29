@@ -6,8 +6,8 @@
 - [X] Run using the accepted testcase
 - [X] Push Alerting
 - [X] Configs
-- [ ] Dashboard using plotly or D3
 - [ ] Change to using bigint instead of float
+- [ ] Dashboard using plotly or D3
 - [ ] Determine if it is needed to refactor or replace python / pandas service
 - [ ] Better logging
 - [ ] Automated trading

@@ -68,8 +68,8 @@ export class MainWorkflow {
 
     // push either a heartbeat or an alert
     const pushDirection = mostRecentTrade[1] === 1 ? 'Buy' : 'Sell'
-    if (mostRecentPosition[1] in [1, -1]) {
-      await this.pushAlertService.pushAlert(pushDirection, mostRecentPosition[0])
+    if (mostRecentPosition[1] !== 0) {
+      await this.pushAlertService.pushAlert(pushDirection, mostRecentTrade[0])
     } else {
       await this.pushAlertService.pushHeartbeat(pushDirection, mostRecentTrade[0])
     }

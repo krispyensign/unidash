@@ -11,8 +11,6 @@ import { ConfigToken, getArgs } from './config'
 
 async function app(): Promise<void> {
   // load the config
-  console.log('Unidash v0.1.0')
-  console.log(process.cwd())
   const args = getArgs()
   console.log(args)
 

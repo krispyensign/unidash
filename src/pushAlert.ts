@@ -43,7 +43,7 @@ export class PushAlertService {
 
   public async pushAlert(
     mostRecentAction: string,
-    mostRecentTradeTimestamp: string
+    mostRecentTradeTimestamp: number
   ): Promise<void> {
     if (!this.priority) return
 
