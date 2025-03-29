@@ -5,24 +5,6 @@ import { points, strategies } from './constants'
 
 export const ConfigToken = new InjectionToken<Arguments>('app.config description')
 
-/**
- * Parse the command line arguments and return the Arguments object.
- *
- * The available options are:
- *   --token0: The address of the first token.
- *   --token1: The address of the second token.
- *   --graphqlEndpoint: The GraphQL endpoint to use.
- *   --mongodbEndpoint: The MongoDB endpoint to use.
- *   --daysToFetch: The number of days to fetch data for. Defaults to 60.
- *   --heartbeat: The string to use for the heartbeat.
- *   --priority: The string to use for the priority.
- *   --strategyWmaColumn: The string to use for the WMA column.
- *   --strategySignalColumn: The string to use for the signal column.
- *   --strategyName: The string to use for the strategy name.
- *
- * @returns The Arguments object.
- */
-
 export function getArgs(): Arguments {
   console.log('Unidash v0.1.0')
   console.log(process.cwd())

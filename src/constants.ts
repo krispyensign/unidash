@@ -1,6 +1,5 @@
 import { TestStrategy } from './types'
 
-export const mostRecentTradeCount = 10
 export const dayInMS = 1000 * 60 * 60 * 24
 
 export const points = ['open', 'close', 'high', 'low', 'ha_open', 'ha_close', 'ha_high', 'ha_low']
