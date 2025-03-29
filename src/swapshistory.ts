@@ -5,6 +5,7 @@ import type { Token } from './types'
 import { Inject, Injectable } from '@angular/core'
 import { DbService } from './db'
 import { ConfigToken } from './config'
+import { ethers } from 'ethers'
 
 @Injectable({
   providedIn: 'root',
@@ -79,8 +80,8 @@ export class SwapHistoryService {
           return {
             swapId: swap.id,
             timestamp: parseInt(swap.timestamp) * 1000,
-            amount0: parseFloat(swap.amount0),
-            amount1: parseFloat(swap.amount1),
+            amount0: ethers.parseEther(swap.amount0).toString(),
+            amount1: ethers.parseEther(swap.amount1).toString(),
             token0: token0,
             token1: token1,
           }

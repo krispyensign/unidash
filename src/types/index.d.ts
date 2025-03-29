@@ -12,8 +12,8 @@ export type Data = {
 export type Swap = {
   timestamp: number
   swapId: string
-  amount0: number
-  amount1: number
+  amount0: string
+  amount1: string
   token0: string
   token1: string
 }
@@ -70,14 +70,6 @@ export type TestSet = {
   signalColumnIn: string
   wmaColumnIn: string
   testStrategy: TestStrategy
-}
-
-export type Portfolio = {
-  timestamp: number
-  amount: number
-  value: number
-  base_value: number
-  inverted: boolean
 }
 
 export type wmaFunc = {
