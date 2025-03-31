@@ -22,6 +22,11 @@ export function getArgs(): Arguments {
         demandOption: true,
         description: 'The contract address of the second token',
       },
+      tokenSwap: {
+        type: 'boolean',
+        default: false,
+        description: 'Whether to swap the tokens internally for display purposes',
+      },
       graphqlEndpoint: {
         type: 'string',
         demandOption: true,

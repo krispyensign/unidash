@@ -57,16 +57,10 @@ export class Signals {
    * @returns A tuple containing the DataFrame with the trading signals, a boolean indicating
    * if the DataFrame is valid, the profit for the quote asset, and the profit for the base asset.
    */
-  public generateSignals(ts: TestSet, df: DataFrame): [DataFrame, boolean, number, number] | null {
-    // resample to 5 min
-    let df_ohlc: DataFrame | null = null
-    try {
-      df_ohlc = chart.ohlc(df, '5Min')
-    } catch (e) {
-      console.log(e)
-      return null
-    }
-
+  public generateSignals(
+    ts: TestSet,
+    df_ohlc: DataFrame
+  ): [DataFrame, boolean, number, number] | null {
     let df_ha: DataFrame
     switch (ts.testStrategy) {
       case 'WMA_HEIKEN_ASHI':

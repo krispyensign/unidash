@@ -26,6 +26,7 @@ export type DataFrame = {
   tail(count?: number): DataFrame
   to_json(): string
   to_csv(): string
+  callKwargs<T, U>(call: string, args: U): T
 }
 
 export type TestStrategy =
@@ -87,7 +88,7 @@ export type signalCompareFunc = {
 
 export type ohlcFunc = {
   kind: 'ohlc'
-  (dataIn: DataFrame, timeFrame: string): DataFrame
+  (dataIn: DataFrame, timeFrame: string, isSwapped: boolean): [DataFrame, string]
 }
 
 export type heikenFunc = {
@@ -126,6 +127,7 @@ export interface Arguments {
   [x: string]: unknown
   token0: string
   token1: string
+  tokenSwap: boolean
   graphqlEndpoint: string
   mongodbEndpoint: string
   daysToFetch: number
@@ -134,4 +136,22 @@ export interface Arguments {
   strategyWmaColumn: string | undefined
   strategySignalColumn: string | undefined
   strategyName: string | undefined
+}
+
+export type OHLC = {
+  timestamp: number
+  token0: string
+  token1: string
+  open: number
+  high: number
+  low: number
+  close: number
+  bid_open: number
+  bid_high: number
+  bid_low: number
+  bid_close: number
+  ask_open: number
+  ask_high: number
+  ask_low: number
+  ask_close: number
 }

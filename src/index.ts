@@ -1,7 +1,7 @@
 import { loadPy } from './pytrade'
-import { SwapHistoryService } from './swapshistory'
+import { ChartService } from './chart'
 import { DbService } from './db'
-import { Injectable, InjectionToken, Injector } from '@angular/core'
+import { Injector } from '@angular/core'
 import { Strategy } from './strategy'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
@@ -24,12 +24,12 @@ async function app(): Promise<void> {
       { provide: PushAlertService, deps: [ConfigToken] },
       { provide: DbService, deps: [ConfigToken] },
       { provide: Strategy, deps: [] },
-      { provide: SwapHistoryService, deps: [DbService, ConfigToken] },
+      { provide: ChartService, deps: [DbService, ConfigToken] },
       { provide: Signals, deps: [Strategy] },
       { provide: BacktestService, deps: [Signals] },
       {
         provide: MainWorkflow,
-        deps: [SwapHistoryService, Signals, BacktestService, PushAlertService, ConfigToken],
+        deps: [ChartService, Signals, BacktestService, PushAlertService, ConfigToken],
       },
     ],
   })

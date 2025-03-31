@@ -1,7 +1,6 @@
-import { loadDataFrame } from './pytrade'
-import { SwapHistoryService } from './swapshistory'
+import { ChartService } from './chart'
 import { Inject, Injectable } from '@angular/core'
-import type { Arguments, DataFrame, Swap, TestSet, TestStrategy, Token } from './types'
+import type { Arguments, DataFrame, TestSet, TestStrategy } from './types'
 import { dayInMS } from './constants'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
@@ -13,14 +12,14 @@ import { PushAlertService } from './pushAlert'
   providedIn: 'root',
 })
 export class MainWorkflow {
-  swapService: SwapHistoryService
+  swapService: ChartService
   signalService: Signals
   backtestService: BacktestService
   config: Arguments
   pushAlertService: PushAlertService
 
   constructor(
-    swapService: SwapHistoryService,
+    swapService: ChartService,
     signalService: Signals,
     backtestService: BacktestService,
     pushAlertService: PushAlertService,
@@ -34,25 +33,15 @@ export class MainWorkflow {
   }
 
   public async run(): Promise<boolean> {
-    // get swap history
-    const allSwaps = await this.GetSwapHistory(
-      this.config.token0 as Token,
-      this.config.token1 as Token
-    )
-    if (allSwaps.length === 0) {
-      console.log('no swaps found')
-      return false
-    }
-
-    // load dataframe
-    const df = await loadDataFrame(JSON.stringify(allSwaps))
+    // get ohlc
+    const df_ohlc = await this.GetOHLC()
 
     // backtest unless a test set has already been pre-selected
-    const testSet: TestSet = this.backTest(df)
+    const testSet: TestSet = this.backTest(df_ohlc)
 
     // generate signals from the selected test set
     console.log('generating signals for test set %s', colorize(testSet))
-    const result = this.signalService.generateSignals(testSet, df)
+    const result = this.signalService.generateSignals(testSet, df_ohlc)
     if (result === null) {
       throw new Error('invalid signals')
     }
@@ -67,6 +56,10 @@ export class MainWorkflow {
     }
 
     // push either a heartbeat or an alert
+    if (mostRecentTrade === undefined) {
+      console.log('no trades found')
+      return false
+    }
     const pushDirection = mostRecentTrade[1] === 1 ? 'Buy' : 'Sell'
     if (mostRecentPosition[1] !== 0) {
       await this.pushAlertService.pushAlert(pushDirection, mostRecentTrade[0])
@@ -77,14 +70,14 @@ export class MainWorkflow {
     return true
   }
 
-  public async GetSwapHistory(token0: Token, token1: Token): Promise<Swap[]> {
+  public async GetOHLC(): Promise<DataFrame> {
     const starterTimestamp = new Date(
       new Date().setUTCHours(0, 0, 0, 1) - dayInMS * this.config.daysToFetch
     )
 
-    const swaps = await this.swapService.GetSwapsSince(token0, token1, starterTimestamp)
+    const df_ohlc = await this.swapService.GetOHLC(starterTimestamp)
 
-    return swaps
+    return df_ohlc
   }
 
   private backTest(df: DataFrame): TestSet {

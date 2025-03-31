@@ -1,7 +1,7 @@
 import pandas
 
 
-def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min") -> pandas.DataFrame:
+def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min", isSwapped: bool = False) -> tuple[pandas.DataFrame, any]:
     """
     Resample the input DataFrame into OHLC format for specified time intervals.
 
@@ -25,6 +25,8 @@ def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min") -> pandas.DataFrame:
     """
 
     df = dataIn.copy()
+    if isSwapped:
+        df.rename(columns={"amount0": "amount1", "amount1": "amount0"}, inplace=True)
 
     # if amount0 is negative, then it is a buy so calculate the ask price
     # i.e. buy ETH sell BOBO
@@ -69,7 +71,9 @@ def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min") -> pandas.DataFrame:
     df_ohlc["ask_low"] = df_a["low"]
     df_ohlc["ask_close"] = df_a["close"]
 
-    return df_ohlc
+    df_json = df_ohlc.reset_index()
+
+    return df_ohlc, df_json.to_json(orient="records")
 
 
 ohlc
