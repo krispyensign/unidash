@@ -25,7 +25,6 @@ def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
         'ha_ask_close', 'ha_bid_open', 'ha_ask_open', 'ha_bid_high', 'ha_ask_high',
         'ha_bid_low', and 'ha_ask_low' are also added.
     """
-    df.reset_index(inplace=True)
     df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
     df["ha_open"] = (df["open"].shift(1) + df["close"].shift(1)) / 2
     df["ha_high"] = df[["high", "open", "close"]].max(axis=1)

@@ -49,8 +49,10 @@ export class MainWorkflow {
     // check the result, get the most recent trades and perform any push alerts
     const [dfSignals, valid] = result
     console.log(colorize(dfSignals.tail(1).to_json()))
-    const { mostRecentPosition, mostRecentTrade } =
-      this.signalService.getMostRecentTrades(dfSignals)
+    const { mostRecentPosition, mostRecentTrade } = this.signalService.getMostRecentTrades(
+      dfSignals,
+      20
+    )
     if (!valid) {
       throw new Error('invalid signals')
     }
@@ -77,7 +79,7 @@ export class MainWorkflow {
 
     const df_ohlc = await this.swapService.GetOHLC(starterTimestamp)
 
-    return df_ohlc
+    return df_ohlc!
   }
 
   private backTest(df: DataFrame): TestSet {

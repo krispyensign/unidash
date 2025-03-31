@@ -27,10 +27,22 @@ export function getArgs(): Arguments {
         default: false,
         description: 'Whether to swap the tokens internally for display purposes',
       },
+      chartDatasource: {
+        type: 'string',
+        default: 'uniswap',
+        description: 'The chart data source to use',
+      },
       graphqlEndpoint: {
         type: 'string',
-        demandOption: true,
         description: 'The Uniswap v3 or v4 GraphQL endpoint to use',
+      },
+      oandaEndpoint: {
+        type: 'string',
+        description: 'The Oanda endpoint to use',
+      },
+      oandaAPIKey: {
+        type: 'string',
+        description: 'The Oanda API key to use',
       },
       mongodbEndpoint: {
         type: 'string',

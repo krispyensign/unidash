@@ -15,7 +15,7 @@ export let chart: TradingChart
 export let util: TradingUtil
 
 export async function loadDataFrame(jsonData: string): Promise<DataFrame> {
-  const df: DataFrame = pd.read_json(jsonData).set_index('timestamp')
+  const df: DataFrame = pd.read_json(jsonData).set_index('timestamp').sort_index()
   return df
 }
 

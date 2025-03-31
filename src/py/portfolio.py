@@ -49,6 +49,8 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     result = any(np.where(portfolio["quote net asset"] < 0, False, True))
 
     portfolio.set_index("timestamp", inplace=True)
+    portfolio.drop_duplicates(inplace=True)
+    portfolio.sort_index(inplace=True)
 
     return (
         portfolio,

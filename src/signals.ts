@@ -13,7 +13,10 @@ export class Signals {
     this.strategy = strategy
   }
 
-  public getMostRecentTrades(dfSignals: DataFrame): {
+  public getMostRecentTrades(
+    dfSignals: DataFrame,
+    count?: number
+  ): {
     mostRecentPosition: [string, number]
     mostRecentTrade: [number, number]
   } {
@@ -37,7 +40,7 @@ export class Signals {
     const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
 
     // print most recent trades
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < (count || 5); i++) {
       if (i >= mostRecentTrades.length) {
         break
       }

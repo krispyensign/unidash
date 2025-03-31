@@ -18,7 +18,7 @@ export class BacktestService {
     this.signals = signals
   }
 
-  public backTest(df: DataFrame): [TestSet, DataFrame] | null {
+  public backTest(dfIn: DataFrame): [TestSet, DataFrame] | null {
     // generate all possible test sets
     const testSets: TestSet[] = []
     for (const signalPoint of points) {
@@ -51,6 +51,7 @@ export class BacktestService {
     for (const ts of testSets) {
       k++
 
+      const df = dfIn.copy()
       // generate signals
       let genResult: [DataFrame, boolean, number, number] | null
       try {

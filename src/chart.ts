@@ -1,7 +1,6 @@
 // Define the GraphQL endpoint for the Uniswap subgraph v3
 import { GraphQLClient, gql } from 'graphql-request'
-import type { Swap, Data, RawSwap, Arguments, DataFrame, OHLC } from './types'
-import type { Token } from './types'
+import type { Swap, Data, RawSwap, Arguments, DataFrame, OHLC, OandaCandle } from './types'
 import { Inject, Injectable } from '@angular/core'
 import { DbService } from './db'
 import { ConfigToken } from './config'
@@ -13,20 +12,106 @@ import { chart, loadDataFrame } from './pytrade'
 })
 export class ChartService {
   dbService: DbService
-  graphqlEndpoint: string
+  graphqlEndpoint: string | undefined
+  oandaEndpoint: string | undefined
+  oandaAPIKey: string | undefined
+  daysToFetch: number
   token0: string
   token1: string
   swapTokens: boolean
 
   constructor(dbService: DbService, @Inject(ConfigToken) config: Arguments) {
     this.dbService = dbService
-    this.graphqlEndpoint = config.graphqlEndpoint
+    if (config.chartDatasource === 'uniswap') {
+      if (config.graphqlEndpoint === undefined) {
+        throw new Error('graphqlEndpoint is required')
+      }
+      this.graphqlEndpoint = config.graphqlEndpoint
+    } else if (config.chartDatasource === 'oanda') {
+      if (config.oandaEndpoint === undefined) {
+        throw new Error('oandaEndpoint is required')
+      }
+      if (config.oandaAPIKey === undefined) {
+        throw new Error('oandaAPIKey is required')
+      }
+      this.oandaEndpoint = config.oandaEndpoint
+      this.oandaAPIKey = config.oandaAPIKey
+    }
     this.token0 = config.token0
     this.token1 = config.token1
     this.swapTokens = config.tokenSwap
+    this.daysToFetch = config.daysToFetch
   }
 
-  public async GetOHLC(date: Date): Promise<DataFrame> {
+  public async GetOHLC(date: Date): Promise<DataFrame | null> {
+    if (this.graphqlEndpoint) {
+      return this.GetOHLCUniswap(date)
+    } else {
+      return this.GetOHLCOanda(date)
+    }
+  }
+
+  private async GetOHLCOanda(date: Date): Promise<DataFrame | null> {
+    // fetch ohlc data from oanda for each day
+    let oandaOhlcData: OandaCandle[] = []
+    for (let i = 0; i < this.daysToFetch; i++) {
+      const dateStart = new Date(date)
+      const dateEnd = new Date(date)
+      dateStart.setUTCHours(0, 0, 0, 0)
+      dateEnd.setUTCHours(23, 59, 59, 999)
+      const response = await fetch(
+        // eslint-disable-next-line max-len
+        `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${this.oandaAPIKey}`,
+          },
+        }
+      )
+      const data = await response.json()
+      oandaOhlcData = oandaOhlcData.concat(data.candles)
+      date.setDate(date.getDate() + 1)
+    }
+
+    const ohlcDate = oandaOhlcData.map<OHLC>(s => ({
+      ask_close: s.ask.c,
+      ask_high: s.ask.h,
+      ask_low: s.ask.l,
+      ask_open: s.ask.o,
+      bid_close: s.bid.c,
+      bid_high: s.bid.h,
+      bid_low: s.bid.l,
+      bid_open: s.bid.o,
+      close: s.mid.c,
+      high: s.mid.h,
+      low: s.mid.l,
+      open: s.mid.o,
+      timestamp: new Date(s.time).getTime(),
+      token0: this.token0,
+      token1: this.token1,
+    }))
+
+    // save ohlc
+    try {
+      const saved = await this.SaveOHLC(ohlcDate)
+      if (!saved) {
+        console.log('ohlc not saved')
+        throw new Error('ohlc not saved')
+      }
+    } catch (e) {
+      console.log(e)
+      throw e
+    }
+
+    // load dataframe
+    const df = await loadDataFrame(JSON.stringify(ohlcDate))
+    console.log('loaded oanda data %d', ohlcDate.length)
+    console.log(df.tail(1).to_json())
+    return df
+  }
+
+  private async GetOHLCUniswap(date: Date): Promise<DataFrame> {
     // get swap history
     const allSwaps = await this.GetSwaps(date)
     if (allSwaps.length === 0) {
@@ -79,7 +164,7 @@ export class ChartService {
     }
 
     // create a graphql client
-    const client = new GraphQLClient(this.graphqlEndpoint)
+    const client = new GraphQLClient(this.graphqlEndpoint!)
 
     // get swaps in k batches of batchSize
     let k = 0

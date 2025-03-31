@@ -1,7 +1,7 @@
 import pandas
 
 
-def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min", isSwapped: bool = False) -> tuple[pandas.DataFrame, any]:
+def ohlc(df: pandas.DataFrame, timeFrame: str = "5Min", isSwapped: bool = False) -> tuple[pandas.DataFrame, any]:
     """
     Resample the input DataFrame into OHLC format for specified time intervals.
 
@@ -24,7 +24,6 @@ def ohlc(dataIn: pandas.DataFrame, timeFrame: str = "5Min", isSwapped: bool = Fa
         A DataFrame containing resampled OHLC data for price, bid price, and ask price.
     """
 
-    df = dataIn.copy()
     if isSwapped:
         df.rename(columns={"amount0": "amount1", "amount1": "amount0"}, inplace=True)
 

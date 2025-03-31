@@ -22,12 +22,16 @@ export type DataFrame = {
   copy(): DataFrame
   set_index(column: string): DataFrame
   reset_index(): DataFrame
+  sort_index(): DataFrame
+  drop_duplicates(): DataFrame
   head(count?: number): DataFrame
   tail(count?: number): DataFrame
   to_json(): string
   to_csv(): string
   callKwargs<T, U>(call: string, args: U): T
 }
+
+export type ChartDatasource = 'uniswap' | 'oanda'
 
 export type TestStrategy =
   | 'WMA_HEIKEN_ASHI'
@@ -128,7 +132,10 @@ export interface Arguments {
   token0: string
   token1: string
   tokenSwap: boolean
-  graphqlEndpoint: string
+  graphqlEndpoint: string | undefined
+  oandaEndpoint: string | undefined
+  oandaAPIKey: string | undefined
+  chartDatasource: string
   mongodbEndpoint: string
   daysToFetch: number
   heartbeat: string | undefined
@@ -154,4 +161,27 @@ export type OHLC = {
   ask_high: number
   ask_low: number
   ask_close: number
+}
+
+export type OandaCandle = {
+  time: string
+  bid: {
+    o: number
+    h: number
+    l: number
+    c: number
+  }
+  ask: {
+    o: number
+    h: number
+    l: number
+    c: number
+  }
+  mid: {
+    o: number
+    h: number
+    l: number
+    c: number
+  }
+  volume: number
 }
