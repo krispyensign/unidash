@@ -43,7 +43,7 @@ export class ChartService {
     this.daysToFetch = config.daysToFetch
   }
 
-  public async GetOHLC(date: Date): Promise<DataFrame | null> {
+  public async GetOHLC(date: Date): Promise<DataFrame> {
     if (this.graphqlEndpoint) {
       return this.GetOHLCUniswap(date)
     } else {
@@ -51,30 +51,77 @@ export class ChartService {
     }
   }
 
-  private async GetOHLCOanda(date: Date): Promise<DataFrame | null> {
+  private async GetOHLCOanda(date: Date): Promise<DataFrame> {
     // fetch ohlc data from oanda for each day
-    let oandaOhlcData: OandaCandle[] = []
-    for (let i = 0; i < this.daysToFetch; i++) {
+    let ohlcData: OHLC[] = []
+    for (let i = 0; i < this.daysToFetch + 2; i++) {
       const dateStart = new Date(date)
       const dateEnd = new Date(date)
-      dateStart.setUTCHours(0, 0, 0, 0)
+      dateStart.setUTCHours(0, 0, 0, 1)
       dateEnd.setUTCHours(23, 59, 59, 999)
-      const response = await fetch(
-        // eslint-disable-next-line max-len
-        `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${this.oandaAPIKey}`,
-          },
+      if (dateStart.getDay() === 5 && dateEnd.getDay() === 6) {
+        date.setDate(date.getDate() + 1)
+        continue
+      }
+
+      // fetch from db not last day in loop
+      if (i < this.daysToFetch + 1) {
+        const dbResp = await this.dbService.getOHLC(this.token0, this.token1, dateStart, dateEnd)
+        if (dbResp.length > 0) {
+          ohlcData = ohlcData.concat(dbResp)
+          date.setDate(date.getDate() + 1)
+          continue
         }
-      )
-      const data = await response.json()
-      oandaOhlcData = oandaOhlcData.concat(data.candles)
+      }
+
+      // fetch from oanda
+      const oandResp = await this.fetchOandaOHLC(dateStart, dateEnd, i === this.daysToFetch + 1)
+      if (oandResp.length === 0) {
+        console.log('no ohlc data')
+        date.setDate(date.getDate() + 1)
+        continue
+      }
+      ohlcData = ohlcData.concat(oandResp)
+
+      // save ohlc to db
+      const saved = await this.dbService.upsertOHLC(oandResp, dateStart, dateEnd)
+      if (!saved) {
+        console.log('ohlc not saved')
+        throw new Error('ohlc not saved')
+      }
+
+      // increment date
       date.setDate(date.getDate() + 1)
     }
 
-    const ohlcDate = oandaOhlcData.map<OHLC>(s => ({
+    // load dataframe
+    const df = await loadDataFrame(JSON.stringify(ohlcData))
+    console.log('loaded oanda data %d', ohlcData.length)
+    return df
+  }
+
+  private async fetchOandaOHLC(dateStart: Date, dateEnd: Date, isLast: boolean): Promise<OHLC[]> {
+    // eslint-disable-next-line max-len
+    const dayurl = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`
+    // eslint-disable-next-line max-len
+    const finalurl = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}`
+    const url = isLast ? finalurl : dayurl
+    console.log('GET: %s', url)
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${this.oandaAPIKey}`,
+      },
+    })
+    const data = await response.json()
+    if (data.errorMessage !== undefined) {
+      throw new Error(data.errorMessage)
+    }
+    const completedCandles: OandaCandle[] = data.candles.filter(
+      (c: { complete: boolean | undefined }) => c?.complete
+    )
+
+    const mappedCandles = completedCandles.map<OHLC>(s => ({
       ask_close: s.ask.c,
       ask_high: s.ask.h,
       ask_low: s.ask.l,
@@ -92,23 +139,7 @@ export class ChartService {
       token1: this.token1,
     }))
 
-    // save ohlc
-    try {
-      const saved = await this.SaveOHLC(ohlcDate)
-      if (!saved) {
-        console.log('ohlc not saved')
-        throw new Error('ohlc not saved')
-      }
-    } catch (e) {
-      console.log(e)
-      throw e
-    }
-
-    // load dataframe
-    const df = await loadDataFrame(JSON.stringify(ohlcDate))
-    console.log('loaded oanda data %d', ohlcDate.length)
-    console.log(df.tail(1).to_json())
-    return df
+    return mappedCandles
   }
 
   private async GetOHLCUniswap(date: Date): Promise<DataFrame> {
@@ -126,17 +157,17 @@ export class ChartService {
     const [df_ohlc, jsonData] = chart.ohlc(df, '5Min', this.swapTokens)
 
     // save ohlc
-    const ohlcData = JSON.parse(jsonData)
-    try {
-      const saved = await this.SaveOHLC(ohlcData)
-      if (!saved) {
-        console.log('ohlc not saved')
-        throw new Error('ohlc not saved')
-      }
-    } catch (e) {
-      console.log(e)
-      throw e
-    }
+    // const ohlcData = JSON.parse(jsonData)
+    // try {
+    //   const saved = await this.SaveOHLC(ohlcData)
+    //   if (!saved) {
+    //     console.log('ohlc not saved')
+    //     throw new Error('ohlc not saved')
+    //   }
+    // } catch (e) {
+    //   console.log(e)
+    //   throw e
+    // }
 
     return df_ohlc
   }
@@ -249,18 +280,5 @@ export class ChartService {
 
     // return the data
     return outData
-  }
-
-  public async SaveOHLC(ohlcData: OHLC[]): Promise<boolean> {
-    for (const ohlc of ohlcData) {
-      ohlc.token0 = this.token0
-      ohlc.token1 = this.token1
-    }
-    const isSaved = await this.dbService.insertOHLC(ohlcData)
-    if (isSaved) {
-      return true
-    }
-
-    return false
   }
 }

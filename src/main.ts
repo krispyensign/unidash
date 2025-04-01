@@ -1,12 +1,13 @@
 import { ChartService } from './chart'
 import { Inject, Injectable } from '@angular/core'
-import type { Arguments, DataFrame, TestSet, TestStrategy } from './types'
+import type { Arguments, DataFrame, PortfolioRecord, TestSet, TestStrategy } from './types'
 import { dayInMS } from './constants'
 import { Signals } from './signals'
 import { BacktestService } from './backtest'
-import { colorize } from 'json-colorizer'
+import { color, colorize } from 'json-colorizer'
 import { ConfigToken } from './config'
 import { PushAlertService } from './pushAlert'
+import { toRecords } from './pytrade'
 
 @Injectable({
   providedIn: 'root',
@@ -37,7 +38,7 @@ export class MainWorkflow {
     const df_ohlc = await this.GetOHLC()
 
     // backtest unless a test set has already been pre-selected
-    const testSet: TestSet = this.backTest(df_ohlc)
+    const testSet: TestSet = await this.backTest(df_ohlc)
 
     // generate signals from the selected test set
     console.log('generating signals for test set %s', colorize(testSet))
@@ -45,28 +46,29 @@ export class MainWorkflow {
     if (result === null) {
       throw new Error('invalid signals')
     }
+    console.log(result[0].tail(10).to_csv())
 
-    // check the result, get the most recent trades and perform any push alerts
+    // check the result, get the most recent trades and fail if invalid
     const [dfSignals, valid] = result
-    console.log(colorize(dfSignals.tail(1).to_json()))
-    const { mostRecentPosition, mostRecentTrade } = this.signalService.getMostRecentTrades(
-      dfSignals,
-      20
-    )
+    // convert to records from the dataframe
+    const records = toRecords(dfSignals)
+
+    const [mostRecentPosition, mostRecentTrade] = this.signalService.getMostRecentTrades(records)
     if (!valid) {
       throw new Error('invalid signals')
     }
+    console.log(colorize(mostRecentTrade))
 
     // push either a heartbeat or an alert
     if (mostRecentTrade === undefined) {
       console.log('no trades found')
       return false
     }
-    const pushDirection = mostRecentTrade[1] === 1 ? 'Buy' : 'Sell'
-    if (mostRecentPosition[1] !== 0) {
-      await this.pushAlertService.pushAlert(pushDirection, mostRecentTrade[0])
+    const pushDirection = mostRecentTrade.position === 1 ? 'Buy' : 'Sell'
+    if (mostRecentPosition.position !== 0) {
+      await this.pushAlertService.pushAlert(pushDirection, mostRecentTrade.timestamp)
     } else {
-      await this.pushAlertService.pushHeartbeat(pushDirection, mostRecentTrade[0])
+      await this.pushAlertService.pushHeartbeat(pushDirection, mostRecentTrade.timestamp)
     }
 
     return true
@@ -76,17 +78,18 @@ export class MainWorkflow {
     const starterTimestamp = new Date(
       new Date().setUTCHours(0, 0, 0, 1) - dayInMS * this.config.daysToFetch
     )
+    console.log('starterTimestamp: %s', starterTimestamp)
 
     const df_ohlc = await this.swapService.GetOHLC(starterTimestamp)
 
-    return df_ohlc!
+    return df_ohlc
   }
 
-  private backTest(df: DataFrame): TestSet {
+  private async backTest(df: DataFrame): Promise<TestSet> {
     let testSet: TestSet | null = null
     if (this.config.strategyName === undefined) {
       console.log('backtesting')
-      const result = this.backtestService.backTest(df)
+      const result = await this.backtestService.backTest(df)
       if (!result || result[0] === null) {
         throw new Error('no valid test sets')
       }

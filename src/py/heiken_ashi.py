@@ -25,11 +25,10 @@ def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
         'ha_ask_close', 'ha_bid_open', 'ha_ask_open', 'ha_bid_high', 'ha_ask_high',
         'ha_bid_low', and 'ha_ask_low' are also added.
     """
-    df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
-    df["ha_open"] = (df["open"].shift(1) + df["close"].shift(1)) / 2
-    df["ha_high"] = df[["high", "open", "close"]].max(axis=1)
-    df["ha_low"] = df[["low", "open", "close"]].min(axis=1)
 
+    df.reset_index(inplace=True)
+
+    df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
     df["ha_bid_close"] = (
         df["bid_open"] + df["bid_high"] + df["bid_low"] + df["bid_close"]
     ) / 4
@@ -37,16 +36,28 @@ def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
         df["ask_open"] + df["ask_high"] + df["ask_low"] + df["ask_close"]
     ) / 4
 
-    df["ha_bid_open"] = (df["bid_open"].shift(1) + df["bid_close"].shift(1)) / 2
-    df["ha_ask_open"] = (df["ask_open"].shift(1) + df["ask_close"].shift(1)) / 2
+    df.at[0, 'ha_open'] = df.at[0, 'open']
+    for i in range(1, len(df)):
+        df.at[i, 'ha_open'] = (df.at[i-1, 'ha_open'] + df.at[i-1, 'ha_close']) / 2
 
-    df["ha_bid_high"] = df[["bid_high", "bid_open", "bid_close"]].max(axis=1)
-    df["ha_ask_high"] = df[["ask_high", "ask_open", "ask_close"]].max(axis=1)
+    df.at[0, 'ha_bid_open'] = df.at[0, 'bid_open']
+    for i in range(1, len(df)):
+        df.at[i, 'ha_bid_open'] = (df.at[i-1, 'ha_bid_open'] + df.at[i-1, 'ha_bid_close']) / 2
 
-    df["ha_bid_low"] = df[["bid_low", "bid_open", "bid_close"]].min(axis=1)
-    df["ha_ask_low"] = df[["ask_low", "ask_open", "ask_close"]].min(axis=1)
+    df.at[0, 'ha_ask_open'] = df.at[0, 'ask_open']
+    for i in range(1, len(df)):
+        df.at[i, 'ha_ask_open'] = (df.at[i-1, 'ha_ask_open'] + df.at[i-1, 'ha_ask_close']) / 2
 
-    df.ffill(inplace=True)
+    df["ha_high"] = df[["high", "ha_open", "ha_close"]].max(axis=1)
+    df["ha_low"] = df[["low", "ha_open", "ha_close"]].min(axis=1)
+
+    df["ha_bid_high"] = df[["bid_high", "ha_bid_open", "ha_bid_close"]].max(axis=1)
+    df["ha_bid_low"] = df[["bid_low", "ha_bid_open", "ha_bid_close"]].min(axis=1)
+
+    df["ha_ask_high"] = df[["ask_high", "ha_ask_open", "ha_ask_close"]].max(axis=1)
+    df["ha_ask_low"] = df[["ask_low", "ha_ask_open", "ha_ask_close"]].min(axis=1)
+
+    df.set_index("timestamp", inplace=True)
 
     return df
 

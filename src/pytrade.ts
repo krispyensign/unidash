@@ -1,6 +1,13 @@
 import path from 'path'
 import { loadPyodide, PyodideInterface } from 'pyodide'
-import type { DataFrame, PythonFunc, TradingChart, TradingIndicator, TradingUtil } from './types'
+import type {
+  DataFrame,
+  PortfolioRecord,
+  PythonFunc,
+  TradingChart,
+  TradingIndicator,
+  TradingUtil,
+} from './types'
 import fs from 'fs'
 
 type Pandas = {
@@ -15,8 +22,29 @@ export let chart: TradingChart
 export let util: TradingUtil
 
 export async function loadDataFrame(jsonData: string): Promise<DataFrame> {
-  const df: DataFrame = pd.read_json(jsonData).set_index('timestamp').sort_index()
+  const df: DataFrame = await pyodide.runPythonAsync(`
+    import pandas as pd
+    pd.read_json('${jsonData}').drop_duplicates().set_index('timestamp').sort_index()
+    `)
+  console.log(df.tail(1).to_csv())
   return df
+}
+
+export function toRecords(df: DataFrame): PortfolioRecord[] {
+  const globals = pyodide.toPy({ df: df })
+  const records = pyodide.runPython(
+    `
+    import pandas as pd
+
+    df_copy = df.copy()
+    df_copy.reset_index(inplace=True)
+
+    df_copy.to_json(orient='records')
+  `,
+    { globals }
+  )
+
+  return JSON.parse(records)
 }
 
 /**

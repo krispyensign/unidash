@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core'
-import { chart, util } from './pytrade'
+import { chart, toRecords as toJSONRecords, util } from './pytrade'
 import { Strategy } from './strategy'
-import type { TestSet, DataFrame } from './types'
+import type { TestSet, DataFrame, PortfolioRecord } from './types'
 
 @Injectable({
   providedIn: 'root',
@@ -14,41 +14,16 @@ export class Signals {
   }
 
   public getMostRecentTrades(
-    dfSignals: DataFrame,
-    count?: number
-  ): {
-    mostRecentPosition: [string, number]
-    mostRecentTrade: [number, number]
-  } {
-    let mostRecentTrades: [number, number][] = []
-    const recentSignals = JSON.parse(dfSignals.to_json())
-    const positionRows: [string, number | null][] = Object.entries(recentSignals['position'])
-
-    // get most recent position
-    const mostRecentPosition: [string, number] = positionRows[positionRows.length - 1] as [
-      string,
-      number,
-    ]
-
+    portfolioRecords: PortfolioRecord[]
+  ): [PortfolioRecord, PortfolioRecord] {
     // get most recent trades
-    for (const signal of positionRows) {
-      if (signal[1] === 0 || signal[1] === null) {
-        continue
-      }
-      mostRecentTrades = mostRecentTrades.concat([[parseInt(signal[0]), signal[1] as number]])
-    }
+    const mostRecentPortfolio = portfolioRecords[portfolioRecords.length - 1]
+    const mostRecentTrades: PortfolioRecord[] = portfolioRecords.filter(record => {
+      return record.signal !== null || record.signal !== 0
+    })
     const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
 
-    // print most recent trades
-    for (let i = 0; i < (count || 5); i++) {
-      if (i >= mostRecentTrades.length) {
-        break
-      }
-      const trade = mostRecentTrades[mostRecentTrades.length - 1 - i]
-      console.log('%s %d', new Date(trade[0]).toLocaleString(), trade[1])
-    }
-
-    return { mostRecentPosition, mostRecentTrade }
+    return [mostRecentPortfolio, mostRecentTrade]
   }
 
   /**

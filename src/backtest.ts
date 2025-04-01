@@ -1,8 +1,9 @@
 import { colorize } from 'json-colorizer'
-import type { DataFrame, TestSet } from './types'
+import type { DataFrame, PortfolioRecord, TestSet } from './types'
 import { points, strategies } from './constants'
 import { Injectable } from '@angular/core'
 import { Signals } from './signals'
+import { toRecords } from './pytrade'
 
 function input_is_ha(column0: string, column1: string): boolean {
   return column0.startsWith('ha_') || column1.startsWith('ha_')
@@ -18,7 +19,7 @@ export class BacktestService {
     this.signals = signals
   }
 
-  public backTest(dfIn: DataFrame): [TestSet, DataFrame] | null {
+  public async backTest(dfIn: DataFrame): Promise<[TestSet, DataFrame] | null> {
     // generate all possible test sets
     const testSets: TestSet[] = []
     for (const signalPoint of points) {
@@ -76,7 +77,9 @@ export class BacktestService {
 
       // log progress
       if (k % 10 === 0) {
-        this.logProgress(k, testSets.length, profit_results.length, ts, result)
+        const recordSet = toRecords(result)
+
+        this.logProgress(k, testSets.length, profit_results.length, ts, recordSet)
       }
     }
     console.log('processed all test sets')
@@ -125,12 +128,12 @@ export class BacktestService {
     testSetLength: number,
     profitResultsLength: number,
     ts: TestSet,
-    result: DataFrame
+    recordSet: PortfolioRecord[]
   ): void {
     console.log(
       `processed ${k} of ${testSetLength} test sets. ${profitResultsLength} valid signals`
     )
-    console.log(`last test set: ${colorize(ts)} ${colorize(result.tail(1).to_json())}`)
-    this.signals.getMostRecentTrades(result)
+    console.log(`last test set: ${colorize(ts)} ${colorize(recordSet[recordSet.length - 1])}`)
+    this.signals.getMostRecentTrades(recordSet)
   }
 }

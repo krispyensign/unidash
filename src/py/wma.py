@@ -40,7 +40,7 @@ def wma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.DataF
     if df.get(column, None) is None:
         raise ValueError(f"df must contain the provided column {column}")
 
-    df["WMA"] = df.rolling(f"{period}D", on="timestamp")[column].apply(
+    df["WMA"] = df.rolling(f"{period}D")[column].apply(
         lambda x: np.average(x, weights=np.arange(len(x), 0, -1))
     )
 

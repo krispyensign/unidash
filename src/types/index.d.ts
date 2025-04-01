@@ -184,4 +184,40 @@ export type OandaCandle = {
     c: number
   }
   volume: number
+  complete: boolean
+}
+
+export type PortfolioRecord = {
+  _id: string
+  timestamp: number
+  open: number
+  high: number
+  low: number
+  close: number
+  ha_close: number
+  ask_close: number
+  bid_close: number
+  ha_open: number
+  ask_open: number
+  bid_open: number
+  ha_high: number
+  ask_high: number
+  bid_high: number
+  ha_low: number
+  ask_low: number
+  bid_low: number
+  wma: number
+  iwma: number
+  signal: number | null
+  current_signal: number
+  position: number
+  buy_signals: number
+  sell_signals: number
+  num_buy_signals: number
+  num_sell_signals: number
+  buy_spend: number
+  sell_spend: number
+  holdings: number
+  quote_net_assets: number
+  base_net_assets: number
 }

@@ -39,7 +39,7 @@ def iwma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.Data
     if df.get(column, None) is None:
         raise ValueError(f"df must contain the provided column {column}")
 
-    df["IWMA"] = df.rolling(f"{period}D", on="timestamp")[column].apply(
+    df["IWMA"] = df.rolling(f"{period}D")[column].apply(
         lambda x: np.average(x, weights=np.arange(1, len(x) + 1))
     )
 
