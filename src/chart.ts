@@ -101,6 +101,9 @@ export class ChartService {
   }
 
   private async fetchOandaOHLC(dateStart: Date, dateEnd: Date, isLast: boolean): Promise<OHLC[]> {
+    if (dateStart.getTime() > Date.now() && isLast) {
+      dateStart = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    }
     // eslint-disable-next-line max-len
     const dayurl = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`
     // eslint-disable-next-line max-len
