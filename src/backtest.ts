@@ -134,6 +134,5 @@ export class BacktestService {
       `processed ${k} of ${testSetLength} test sets. ${profitResultsLength} valid signals`
     )
     console.log(`last test set: ${colorize(ts)} ${colorize(recordSet[recordSet.length - 1])}`)
-    this.signals.getMostRecentTrades(recordSet)
   }
 }

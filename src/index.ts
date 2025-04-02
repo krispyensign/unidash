@@ -12,7 +12,6 @@ import { ConfigToken, getArgs } from './config'
 async function app(): Promise<void> {
   // load the config
   const args = getArgs()
-  console.log(args)
 
   // load python environment
   await loadPy()

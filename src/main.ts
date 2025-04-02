@@ -46,26 +46,38 @@ export class MainWorkflow {
     if (result === null) {
       throw new Error('invalid signals')
     }
-    console.log(result[0].tail(10).to_csv())
 
     // check the result, get the most recent trades and fail if invalid
-    const [dfSignals, valid] = result
     // convert to records from the dataframe
+    const [dfSignals, valid] = result
     const records = toRecords(dfSignals)
-
-    const [mostRecentPosition, mostRecentTrade] = this.signalService.getMostRecentTrades(records)
     if (!valid) {
-      throw new Error('invalid signals')
+      console.log(colorize(records.slice(-1)))
+      console.log('invalid signals')
+      return false
     }
-    console.log(colorize(mostRecentTrade))
 
-    // push either a heartbeat or an alert
-    if (mostRecentTrade === undefined) {
+    // get the trades from the records
+    const trades = records.filter(record => record.position !== null && record.position !== 0)
+    if (trades.length === 0) {
       console.log('no trades found')
       return false
     }
+
+    // format and print the most recent trades
+    console.log(
+      trades
+        .map(record => {
+          const direction = record.position === 1 ? 'Buy' : 'Sell'
+          return `${direction} ${new Date(record.timestamp)}`
+        })
+        .join('\n')
+    )
+
+    const mostRecentTrade = trades.slice(-1)[0]
+    const mostRecentPosition = records.slice(-1)[0]
     const pushDirection = mostRecentTrade.position === 1 ? 'Buy' : 'Sell'
-    if (mostRecentPosition.position !== 0) {
+    if (mostRecentPosition.position !== 0 && mostRecentPosition.position !== null) {
       await this.pushAlertService.pushAlert(pushDirection, mostRecentTrade.timestamp)
     } else {
       await this.pushAlertService.pushHeartbeat(pushDirection, mostRecentTrade.timestamp)
@@ -78,7 +90,7 @@ export class MainWorkflow {
     const starterTimestamp = new Date(
       new Date().setUTCHours(0, 0, 0, 1) - dayInMS * this.config.daysToFetch
     )
-    console.log('starterTimestamp: %s', starterTimestamp)
+    // console.log('starterTimestamp: %s', starterTimestamp)
 
     const df_ohlc = await this.swapService.GetOHLC(starterTimestamp)
 
@@ -96,7 +108,7 @@ export class MainWorkflow {
 
       testSet = result[0]
     } else {
-      console.log('using pre-selected test set')
+      // console.log('using pre-selected test set')
       if (
         this.config.strategySignalColumn === undefined ||
         this.config.strategyWmaColumn === undefined ||

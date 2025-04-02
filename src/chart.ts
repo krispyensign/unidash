@@ -54,7 +54,7 @@ export class ChartService {
   private async GetOHLCOanda(date: Date): Promise<DataFrame> {
     // fetch ohlc data from oanda for each day
     let ohlcData: OHLC[] = []
-    for (let i = 0; i < this.daysToFetch + 2; i++) {
+    for (let i = 0; i < this.daysToFetch; i++) {
       const dateStart = new Date(date)
       const dateEnd = new Date(date)
       dateStart.setUTCHours(0, 0, 0, 1)
@@ -65,7 +65,7 @@ export class ChartService {
       }
 
       // fetch from db not last day in loop
-      if (i < this.daysToFetch + 1) {
+      if (i < this.daysToFetch) {
         const dbResp = await this.dbService.getOHLC(this.token0, this.token1, dateStart, dateEnd)
         if (dbResp.length > 0) {
           ohlcData = ohlcData.concat(dbResp)
@@ -75,7 +75,7 @@ export class ChartService {
       }
 
       // fetch from oanda
-      const oandResp = await this.fetchOandaOHLC(dateStart, dateEnd, i === this.daysToFetch + 1)
+      const oandResp = await this.fetchOandaOHLC(dateStart, dateEnd)
       if (oandResp.length === 0) {
         console.log('no ohlc data')
         date.setDate(date.getDate() + 1)
@@ -100,15 +100,15 @@ export class ChartService {
     return df
   }
 
-  private async fetchOandaOHLC(dateStart: Date, dateEnd: Date, isLast: boolean): Promise<OHLC[]> {
-    if (dateStart.getTime() > Date.now() && isLast) {
+  private async fetchOandaOHLC(dateStart: Date, dateEnd: Date): Promise<OHLC[]> {
+    if (dateStart.getTime() > Date.now()) {
       dateStart = new Date(Date.now() - 24 * 60 * 60 * 1000)
     }
+    if (dateEnd.getTime() > Date.now()) {
+      dateEnd = new Date(Date.now() - 1)
+    }
     // eslint-disable-next-line max-len
-    const dayurl = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`
-    // eslint-disable-next-line max-len
-    const finalurl = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}`
-    const url = isLast ? finalurl : dayurl
+    const url = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`
     console.log('GET: %s', url)
     const response = await fetch(url, {
       method: 'GET',

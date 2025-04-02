@@ -17,8 +17,6 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     portfolio = data.copy()
 
     portfolio = portfolio[(portfolio["ask_close"] > 0) & (portfolio["bid_close"] > 0)]
-    # initial_price = portfolio["bid_close"].iloc[0]
-    initial_price = 0
     
     portfolio["current_signal"] = portfolio["position"].cumsum()
     portfolio["buy_signals"] = abs(portfolio["position"].where(portfolio["position"] == 1, 0))
@@ -26,10 +24,13 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     portfolio["num_buy_signals"] = portfolio["buy_signals"].cumsum()
     portfolio["num_sell_signals"] = portfolio["sell_signals"].cumsum()
 
+    # calculate the position based on the signal
+
     # if position is 1 then it is a buy signal, if its a buy signal then
     # use the ask_close price
     # calculate the buy spend
     portfolio["buy_spend"] = (portfolio["buy_signals"] * portfolio["ask_close"]).cumsum()
+    # portfolio["long_credit"] = portfolio["buy_spend"] * .015
 
     # if the position is -1 then it is a sell signal, if its a sell signal then
     # use the bid_close price
@@ -37,9 +38,10 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     portfolio["sell_spend"] = (portfolio["sell_signals"] * portfolio["bid_close"]).cumsum()
     portfolio["holdings"] = portfolio["current_signal"] * portfolio["bid_close"]
 
-    portfolio["quote_net_asset"] = portfolio["holdings"] + initial_price + portfolio["sell_spend"] - portfolio["buy_spend"]
+    portfolio["quote_net_asset"] = portfolio["holdings"] + portfolio["sell_spend"] \
+        - portfolio["buy_spend"]
     portfolio["base_net_asset"] = portfolio["quote_net_asset"] / portfolio["bid_close"]
-    # portfolio["roi"] = (portfolio["quote_net_asset"] - initial_price) / initial_price
+    portfolio["drawdown"] = (portfolio["quote_net_asset"] - portfolio["quote_net_asset"].cummax())
 
     # check if the net asset is less than 0 this would mean that we have a loss
     # and that this is a bad signal

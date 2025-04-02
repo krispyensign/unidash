@@ -6,9 +6,9 @@ import { points, strategies } from './constants'
 export const ConfigToken = new InjectionToken<Arguments>('app.config description')
 
 export function getArgs(): Arguments {
-  console.log('Unidash v0.1.0')
-  console.log(process.cwd())
-  console.log()
+  // console.log('Unidash v0.1.0')
+  // console.log(process.cwd())
+  // console.log()
   return yargs(process.argv.slice(2))
     .config()
     .options({

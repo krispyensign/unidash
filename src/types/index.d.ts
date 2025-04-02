@@ -220,4 +220,5 @@ export type PortfolioRecord = {
   holdings: number
   quote_net_assets: number
   base_net_assets: number
+  drawdown: number
 }

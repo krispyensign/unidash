@@ -13,19 +13,6 @@ export class Signals {
     this.strategy = strategy
   }
 
-  public getMostRecentTrades(
-    portfolioRecords: PortfolioRecord[]
-  ): [PortfolioRecord, PortfolioRecord] {
-    // get most recent trades
-    const mostRecentPortfolio = portfolioRecords[portfolioRecords.length - 1]
-    const mostRecentTrades: PortfolioRecord[] = portfolioRecords.filter(record => {
-      return record.signal !== null || record.signal !== 0
-    })
-    const mostRecentTrade = mostRecentTrades[mostRecentTrades.length - 1]
-
-    return [mostRecentPortfolio, mostRecentTrade]
-  }
-
   /**
    * Generate trading signals using the specified strategy and parameters.
    *

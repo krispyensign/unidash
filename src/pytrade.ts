@@ -26,7 +26,7 @@ export async function loadDataFrame(jsonData: string): Promise<DataFrame> {
     import pandas as pd
     pd.read_json('${jsonData}').drop_duplicates().set_index('timestamp').sort_index()
     `)
-  console.log(df.tail(1).to_csv())
+  // console.log(df.tail(1).to_csv())
   return df
 }
 
