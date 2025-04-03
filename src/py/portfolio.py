@@ -17,8 +17,36 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     portfolio = data.copy()
 
     portfolio = portfolio[(portfolio["ask_close"] > 0) & (portfolio["bid_close"] > 0)]
+
+    isHold = False
+    firstI = 0
+    portfolio["original_hold_price"] = 0
+    portfolio["original_hold_value"] = 0
+    for i in range(len(portfolio)):
+        if not isHold and portfolio["signal"].iloc[i] == 1:
+            isHold = True
+            firstI = i
+            portfolio["original_hold_price"].iloc[i] = portfolio["bid_close"].iloc[i]
+        elif isHold and i > firstI and portfolio["signal"].iloc[i] == 1:
+            portfolio["original_hold_price"].iloc[i] = portfolio["original_hold_price"].iloc[firstI]
+        elif isHold and portfolio["signal"].iloc[i] == 0:
+            isHold = False
+
+    portfolio["original_hold_value"] = portfolio["bid_close"]*portfolio["signal"] - portfolio["original_hold_price"]
+    portfolio["max_hold_value"] = portfolio["original_hold_value"].cummax()
+        
+    # calculate the t/p value for each signal and reset the signal to 0 after the t/p is reached
+    for i in range(len(portfolio)):
+        if portfolio["original_hold_value"].iloc[i] > .3 and portfolio["signal"].iloc[i] == 1:
+            for j in range(i, len(portfolio)):
+                if portfolio["signal"].iloc[j] == 1:
+                    portfolio["signal"].iloc[j] = 0
+                else:
+                    break
     
-    portfolio["current_signal"] = portfolio["position"].cumsum()
+    portfolio["position"] = portfolio["signal"].diff()
+
+    # portfolio["current_signal"] = portfolio["position"].cumsum()
     portfolio["buy_signals"] = abs(portfolio["position"].where(portfolio["position"] == 1, 0))
     portfolio["sell_signals"] = abs(portfolio["position"].where(portfolio["position"] == -1, 0))
     portfolio["num_buy_signals"] = portfolio["buy_signals"].cumsum()
@@ -36,7 +64,7 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     # use the bid_close price
     # calculate the sell spend
     portfolio["sell_spend"] = (portfolio["sell_signals"] * portfolio["bid_close"]).cumsum()
-    portfolio["holdings"] = portfolio["current_signal"] * portfolio["bid_close"]
+    portfolio["holdings"] = portfolio["signal"] * portfolio["bid_close"]
 
     portfolio["quote_net_asset"] = portfolio["holdings"] + portfolio["sell_spend"] \
         - portfolio["buy_spend"]

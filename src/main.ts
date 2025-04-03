@@ -100,7 +100,7 @@ export class MainWorkflow {
     )
     // console.log('starterTimestamp: %s', starterTimestamp)
 
-    const df_ohlc = await this.swapService.GetOHLC(starterTimestamp)
+    const df_ohlc = await this.swapService.GetOHLC(starterTimestamp, this.config.offset)
 
     return df_ohlc
   }

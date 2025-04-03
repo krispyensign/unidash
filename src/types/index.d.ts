@@ -138,6 +138,7 @@ export interface Arguments {
   chartDatasource: string
   mongodbEndpoint: string
   daysToFetch: number
+  offset: number
   heartbeat: string | undefined
   priority: string | undefined
   strategyWmaColumn: string | undefined

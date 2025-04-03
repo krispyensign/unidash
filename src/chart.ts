@@ -6,6 +6,7 @@ import { DbService } from './db'
 import { ConfigToken } from './config'
 import { ethers } from 'ethers'
 import { chart, loadDataFrame } from './pytrade'
+import { off } from 'process'
 
 @Injectable({
   providedIn: 'root',
@@ -43,17 +44,21 @@ export class ChartService {
     this.daysToFetch = config.daysToFetch
   }
 
-  public async GetOHLC(date: Date): Promise<DataFrame> {
+  public async GetOHLC(date: Date, offset: number): Promise<DataFrame> {
     if (this.graphqlEndpoint) {
       return this.GetOHLCUniswap(date)
     } else {
-      return this.GetOHLCOanda(date)
+      return this.GetOHLCOanda(date, offset)
     }
   }
 
-  private async GetOHLCOanda(date: Date): Promise<DataFrame> {
+  private async GetOHLCOanda(date: Date, offset: number): Promise<DataFrame> {
     // fetch ohlc data from oanda for each day
     let ohlcData: OHLC[] = []
+
+    const offsetDate = date.getTime() - offset * 24 * 60 * 60 * 1000
+    date = new Date(offsetDate)
+
     for (let i = 0; i < this.daysToFetch + 1; i++) {
       const dateStart = new Date(date)
       const dateEnd = new Date(date)
@@ -65,7 +70,7 @@ export class ChartService {
       }
 
       // fetch from db not last day in loop
-      if (i < this.daysToFetch) {
+      if (i < this.daysToFetch || offset > 0) {
         const dbResp = await this.dbService.getOHLC(this.token0, this.token1, dateStart, dateEnd)
         if (dbResp.length > 0) {
           ohlcData = ohlcData.concat(dbResp)

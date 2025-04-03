@@ -55,6 +55,12 @@ export function getArgs(): Arguments {
         description:
           'The number of days to fetch data for the token pair from the Uniswap subgraph',
       },
+      offset: {
+        type: 'number',
+        default: 0,
+        description:
+          'The offset in days to fetch data for the token pair from the Uniswap subgraph',
+      },
       heartbeat: { type: 'string', description: 'The ntfy heartbeat topic' },
       priority: { type: 'string', description: 'The ntfy priority topic' },
       strategyWmaColumn: {
