@@ -36,17 +36,21 @@ def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
         df["ask_open"] + df["ask_high"] + df["ask_low"] + df["ask_close"]
     ) / 4
 
-    df.at[0, 'ha_open'] = df.at[0, 'open']
+    df.at[0, "ha_open"] = df.at[0, "open"]
     for i in range(1, len(df)):
-        df.at[i, 'ha_open'] = (df.at[i-1, 'ha_open'] + df.at[i-1, 'ha_close']) / 2
+        df.at[i, "ha_open"] = (df.at[i - 1, "ha_open"] + df.at[i - 1, "ha_close"]) / 2
 
-    df.at[0, 'ha_bid_open'] = df.at[0, 'bid_open']
+    df.at[0, "ha_bid_open"] = df.at[0, "bid_open"]
     for i in range(1, len(df)):
-        df.at[i, 'ha_bid_open'] = (df.at[i-1, 'ha_bid_open'] + df.at[i-1, 'ha_bid_close']) / 2
+        df.at[i, "ha_bid_open"] = (
+            df.at[i - 1, "ha_bid_open"] + df.at[i - 1, "ha_bid_close"]
+        ) / 2
 
-    df.at[0, 'ha_ask_open'] = df.at[0, 'ask_open']
+    df.at[0, "ha_ask_open"] = df.at[0, "ask_open"]
     for i in range(1, len(df)):
-        df.at[i, 'ha_ask_open'] = (df.at[i-1, 'ha_ask_open'] + df.at[i-1, 'ha_ask_close']) / 2
+        df.at[i, "ha_ask_open"] = (
+            df.at[i - 1, "ha_ask_open"] + df.at[i - 1, "ha_ask_close"]
+        ) / 2
 
     df["ha_high"] = df[["high", "ha_open", "ha_close"]].max(axis=1)
     df["ha_low"] = df[["low", "ha_open", "ha_close"]].min(axis=1)

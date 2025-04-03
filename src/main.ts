@@ -8,6 +8,7 @@ import { color, colorize } from 'json-colorizer'
 import { ConfigToken } from './config'
 import { PushAlertService } from './pushAlert'
 import { toRecords } from './pytrade'
+import { t } from 'file-system-cache/lib/common.t'
 
 @Injectable({
   providedIn: 'root',
@@ -58,7 +59,12 @@ export class MainWorkflow {
     }
 
     // get the trades from the records
-    const trades = records.filter(record => record.position !== null && record.position !== 0)
+    const trades = records.filter((record, index) => {
+      // if (record.position !== null && record.position !== 0) {
+      //   console.log(record.position, index)
+      // }
+      return record.position !== null && record.position !== 0
+    })
     if (trades.length === 0) {
       console.log('no trades found')
       return false
@@ -67,6 +73,7 @@ export class MainWorkflow {
     // format and print the most recent trades
     console.log(
       trades
+        // .slice(-5, trades.length)
         .map(record => {
           const direction = record.position === 1 ? 'Buy' : 'Sell'
           return `${direction} ${new Date(record.timestamp)}`
@@ -82,6 +89,7 @@ export class MainWorkflow {
     } else {
       await this.pushAlertService.pushHeartbeat(pushDirection, mostRecentTrade.timestamp)
     }
+    console.log(colorize(records.slice(-1)))
 
     return true
   }

@@ -1,6 +1,7 @@
 import path from 'path'
 import { loadPyodide, PyodideInterface } from 'pyodide'
 import type {
+  Data,
   DataFrame,
   PortfolioRecord,
   PythonFunc,
@@ -45,6 +46,18 @@ export function toRecords(df: DataFrame): PortfolioRecord[] {
   )
 
   return JSON.parse(records)
+}
+
+export function dup(df: DataFrame): DataFrame {
+  const globals = pyodide.toPy({ df: df })
+  const dup = pyodide.runPython(
+    `
+    df_copy = df.copy()
+    df_copy
+  `,
+    { globals }
+  )
+  return dup
 }
 
 /**

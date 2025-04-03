@@ -20,7 +20,7 @@ export class PushAlertService {
     const response = await fetch(`https://ntfy.sh/${this.priority}`, {
       method: 'POST',
       body: `error: ${e}`,
-      headers: { Priority: '4' },
+      headers: { Priority: '2' },
     })
     console.log(response)
   }
@@ -50,7 +50,7 @@ export class PushAlertService {
     const response = await fetch(`https://ntfy.sh/${this.priority}`, {
       method: 'POST',
       body: `${mostRecentAction} ${new Date(mostRecentTradeTimestamp)}`,
-      headers: { Priority: '4' },
+      headers: { Priority: '2' },
     })
 
     console.log(await response.text())

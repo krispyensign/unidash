@@ -3,7 +3,7 @@ import type { DataFrame, PortfolioRecord, TestSet } from './types'
 import { points, strategies } from './constants'
 import { Injectable } from '@angular/core'
 import { Signals } from './signals'
-import { toRecords } from './pytrade'
+import { dup, toRecords } from './pytrade'
 
 function input_is_ha(column0: string, column1: string): boolean {
   return column0.startsWith('ha_') || column1.startsWith('ha_')
@@ -21,30 +21,7 @@ export class BacktestService {
 
   public async backTest(dfIn: DataFrame): Promise<[TestSet, DataFrame] | null> {
     // generate all possible test sets
-    const testSets: TestSet[] = []
-    for (const signalPoint of points) {
-      for (const wmaPoint of points) {
-        for (const strategy of strategies) {
-          // skip test set if strategy is HEIKEN_ASHI and input is not HEIKEN_ASHI columns
-          if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
-            continue
-          }
-
-          // skip test set if strategy is OHLC and input is not OHLC columns
-          if (strategy.includes('OHLC') && input_is_ha(signalPoint, wmaPoint)) {
-            continue
-          }
-
-          // create test set
-          const testSet: TestSet = {
-            signalColumnIn: signalPoint,
-            wmaColumnIn: wmaPoint,
-            testStrategy: strategy,
-          }
-          testSets.push(testSet)
-        }
-      }
-    }
+    const testSets: TestSet[] = this.generateTestCases()
 
     // run all test sets
     let k = 0
@@ -52,8 +29,8 @@ export class BacktestService {
     for (const ts of testSets) {
       k++
 
-      const df = dfIn.copy()
       // generate signals
+      const df = dup(dfIn)
       let genResult: [DataFrame, boolean, number, number] | null
       try {
         genResult = this.signals.generateSignals(ts, df)
@@ -93,6 +70,35 @@ export class BacktestService {
     const [max_profit_quote_ts, max_result] = profitResult
 
     return [max_profit_quote_ts, max_result]
+  }
+
+  private generateTestCases(): TestSet[] {
+    const testSets: TestSet[] = []
+    for (const signalPoint of points) {
+      for (const wmaPoint of points) {
+        for (const strategy of strategies) {
+          // skip test set if strategy is HEIKEN_ASHI and input is not HEIKEN_ASHI columns
+          if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
+            continue
+          }
+
+          // skip test set if strategy is OHLC and input is not OHLC columns
+          if (strategy.includes('OHLC') && input_is_ha(signalPoint, wmaPoint)) {
+            continue
+          }
+
+          // create test set
+          const testSet: TestSet = {
+            signalColumnIn: signalPoint,
+            wmaColumnIn: wmaPoint,
+            testStrategy: strategy,
+          }
+          testSets.push(testSet)
+        }
+      }
+    }
+
+    return testSets
   }
 
   private findMaxProfit(

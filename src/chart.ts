@@ -54,7 +54,7 @@ export class ChartService {
   private async GetOHLCOanda(date: Date): Promise<DataFrame> {
     // fetch ohlc data from oanda for each day
     let ohlcData: OHLC[] = []
-    for (let i = 0; i < this.daysToFetch; i++) {
+    for (let i = 0; i < this.daysToFetch + 1; i++) {
       const dateStart = new Date(date)
       const dateEnd = new Date(date)
       dateStart.setUTCHours(0, 0, 0, 1)
@@ -105,7 +105,7 @@ export class ChartService {
       dateStart = new Date(Date.now() - 24 * 60 * 60 * 1000)
     }
     if (dateEnd.getTime() > Date.now()) {
-      dateEnd = new Date(Date.now() - 1)
+      dateEnd = new Date(Date.now() - 1000)
     }
     // eslint-disable-next-line max-len
     const url = `${this.oandaEndpoint}/v3/instruments/${this.token0}_${this.token1}/candles?price=MAB&granularity=M5&from=${dateStart.toISOString()}&to=${dateEnd.toISOString()}`

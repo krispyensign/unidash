@@ -1,7 +1,9 @@
 import pandas
 
 
-def ohlc(df: pandas.DataFrame, timeFrame: str = "5Min", isSwapped: bool = False) -> tuple[pandas.DataFrame, any]:
+def ohlc(
+    df: pandas.DataFrame, timeFrame: str = "5Min", isSwapped: bool = False
+) -> tuple[pandas.DataFrame, any]:
     """
     Resample the input DataFrame into OHLC format for specified time intervals.
 
