@@ -92,6 +92,7 @@ export class BacktestService {
             signalColumnIn: signalPoint,
             wmaColumnIn: wmaPoint,
             testStrategy: strategy,
+            period: 288,
           }
           testSets.push(testSet)
         }

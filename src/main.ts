@@ -73,7 +73,7 @@ export class MainWorkflow {
     // format and print the most recent trades
     console.log(
       trades
-        // .slice(-5, trades.length)
+        .slice(-5, trades.length)
         .map(record => {
           const direction = record.position === 1 ? 'Buy' : 'Sell'
           return `${direction} ${new Date(record.timestamp)}`
@@ -128,6 +128,7 @@ export class MainWorkflow {
         signalColumnIn: this.config.strategySignalColumn,
         wmaColumnIn: this.config.strategyWmaColumn,
         testStrategy: this.config.strategyName as TestStrategy,
+        period: this.config.strategyWmaPeriod,
       }
     }
 

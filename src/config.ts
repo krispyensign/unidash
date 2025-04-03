@@ -51,7 +51,7 @@ export function getArgs(): Arguments {
       },
       daysToFetch: {
         type: 'number',
-        default: 60,
+        default: 21,
         description:
           'The number of days to fetch data for the token pair from the Uniswap subgraph',
       },
@@ -60,6 +60,11 @@ export function getArgs(): Arguments {
         default: 0,
         description:
           'The offset in days to fetch data for the token pair from the Uniswap subgraph',
+      },
+      strategyWmaPeriod: {
+        type: 'number',
+        default: 20,
+        description: 'The WMA period',
       },
       heartbeat: { type: 'string', description: 'The ntfy heartbeat topic' },
       priority: { type: 'string', description: 'The ntfy priority topic' },

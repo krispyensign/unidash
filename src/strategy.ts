@@ -21,7 +21,7 @@ export class Strategy {
    */
   public wmaHeikenAshiStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
-    df_ha = indicator.wma(df_ha, 20, ts.wmaColumnIn)
+    df_ha = indicator.wma(df_ha, ts.period, ts.wmaColumnIn)
     df_ha = indicator.signal_compare(df_ha, ts.signalColumnIn, 'WMA')
     return df_ha
   }
@@ -42,7 +42,7 @@ export class Strategy {
    */
   public wmaHeikenAshiInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
-    df_ha = indicator.wma(df_ha, 20, ts.wmaColumnIn)
+    df_ha = indicator.wma(df_ha, ts.period, ts.wmaColumnIn)
     df_ha = indicator.signal_compare(df_ha, 'WMA', ts.signalColumnIn)
     return df_ha
   }
@@ -64,7 +64,7 @@ export class Strategy {
 
   public iwmaHeikenAshiStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
-    df_ha = indicator.iwma(df_ha, 20, ts.wmaColumnIn)
+    df_ha = indicator.iwma(df_ha, ts.period, ts.wmaColumnIn)
     df_ha = indicator.signal_compare(df_ha, ts.signalColumnIn, 'IWMA')
     return df_ha
   }
@@ -86,7 +86,7 @@ export class Strategy {
    */
   public iwmaHeikenAshiInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
     let df_ha = chart.heiken(df)
-    df_ha = indicator.iwma(df_ha, 20, ts.wmaColumnIn)
+    df_ha = indicator.iwma(df_ha, ts.period, ts.wmaColumnIn)
     df_ha = indicator.signal_compare(df_ha, 'IWMA', ts.signalColumnIn)
     return df_ha
   }
@@ -105,7 +105,7 @@ export class Strategy {
    * @returns A DataFrame with the trading signals added.
    */
   public wmaOhlcStrategy(ts: TestSet, df: DataFrame): DataFrame {
-    let df_ohlc = indicator.wma(df, 20, ts.wmaColumnIn)
+    let df_ohlc = indicator.wma(df, ts.period, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, ts.signalColumnIn, 'WMA')
     return df_ohlc
   }
@@ -124,7 +124,7 @@ export class Strategy {
    * @returns A DataFrame with the trading signals added.
    */
   public wmaOhlcInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
-    let df_ohlc = indicator.wma(df, 20, ts.wmaColumnIn)
+    let df_ohlc = indicator.wma(df, ts.period, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, 'WMA', ts.signalColumnIn)
     return df_ohlc
   }
@@ -142,7 +142,7 @@ export class Strategy {
    * @returns A DataFrame with the trading signals added.
    */
   public iwmaOhlcStrategy(ts: TestSet, df: DataFrame): DataFrame {
-    let df_ohlc = indicator.iwma(df, 20, ts.wmaColumnIn)
+    let df_ohlc = indicator.iwma(df, ts.period, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, ts.signalColumnIn, 'IWMA')
     return df_ohlc
   }
@@ -162,7 +162,7 @@ export class Strategy {
    * @returns A DataFrame with the trading signals added.
    */
   public iwmaOhlcInverseStrategy(ts: TestSet, df: DataFrame): DataFrame {
-    let df_ohlc = indicator.iwma(df, 20, ts.wmaColumnIn)
+    let df_ohlc = indicator.iwma(df, ts.period, ts.wmaColumnIn)
     df_ohlc = indicator.signal_compare(df_ohlc, 'IWMA', ts.signalColumnIn)
     return df_ohlc
   }

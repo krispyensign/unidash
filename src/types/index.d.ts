@@ -75,6 +75,7 @@ export type TestSet = {
   signalColumnIn: string
   wmaColumnIn: string
   testStrategy: TestStrategy
+  period: number
 }
 
 export type wmaFunc = {
@@ -144,6 +145,7 @@ export interface Arguments {
   strategyWmaColumn: string | undefined
   strategySignalColumn: string | undefined
   strategyName: string | undefined
+  strategyWmaPeriod: number
 }
 
 export type OHLC = {

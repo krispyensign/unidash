@@ -37,7 +37,8 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
         
     # calculate the t/p value for each signal and reset the signal to 0 after the t/p is reached
     for i in range(len(portfolio)):
-        if portfolio["original_hold_value"].iloc[i] > .3 and portfolio["signal"].iloc[i] == 1:
+        if portfolio["original_hold_value"].iloc[i] > 1 and portfolio["signal"].iloc[i] == 1:
+            print("take profit at", i, portfolio["original_hold_value"].iloc[i])
             for j in range(i, len(portfolio)):
                 if portfolio["signal"].iloc[j] == 1:
                     portfolio["signal"].iloc[j] = 0
