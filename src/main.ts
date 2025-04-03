@@ -73,10 +73,11 @@ export class MainWorkflow {
     // format and print the most recent trades
     console.log(
       trades
-        .slice(-5, trades.length)
+        .slice(-10, trades.length)
         .map(record => {
           const direction = record.position === 1 ? 'Buy' : 'Sell'
-          return `${direction} ${new Date(record.timestamp)}`
+          const price = record.position === 1 ? record.ask_close : record.bid_close
+          return `${direction} ${new Date(record.timestamp)} ${price}`
         })
         .join('\n')
     )

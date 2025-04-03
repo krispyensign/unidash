@@ -126,7 +126,7 @@ export class ChartService {
       throw new Error(data.errorMessage)
     }
     const completedCandles: OandaCandle[] = data.candles.filter(
-      (c: { complete: boolean | undefined }) => c?.complete
+      (c: { complete: boolean | undefined }) => c.complete !== undefined
     )
 
     const mappedCandles = completedCandles.map<OHLC>(s => ({

@@ -74,27 +74,29 @@ export class BacktestService {
 
   private generateTestCases(): TestSet[] {
     const testSets: TestSet[] = []
-    for (const signalPoint of points) {
-      for (const wmaPoint of points) {
-        for (const strategy of strategies) {
-          // skip test set if strategy is HEIKEN_ASHI and input is not HEIKEN_ASHI columns
-          if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
-            continue
-          }
+    for (const period of [36, 72, 144, 288]) {
+      for (const signalPoint of points) {
+        for (const wmaPoint of points) {
+          for (const strategy of strategies) {
+            // skip test set if strategy is HEIKEN_ASHI and input is not HEIKEN_ASHI columns
+            if (strategy.includes('HEIKEN_ASHI') && !input_is_ha(signalPoint, wmaPoint)) {
+              continue
+            }
 
-          // skip test set if strategy is OHLC and input is not OHLC columns
-          if (strategy.includes('OHLC') && input_is_ha(signalPoint, wmaPoint)) {
-            continue
-          }
+            // skip test set if strategy is OHLC and input is not OHLC columns
+            if (strategy.includes('OHLC') && input_is_ha(signalPoint, wmaPoint)) {
+              continue
+            }
 
-          // create test set
-          const testSet: TestSet = {
-            signalColumnIn: signalPoint,
-            wmaColumnIn: wmaPoint,
-            testStrategy: strategy,
-            period: 288,
+            // create test set
+            const testSet: TestSet = {
+              signalColumnIn: signalPoint,
+              wmaColumnIn: wmaPoint,
+              testStrategy: strategy,
+              period: period,
+            }
+            testSets.push(testSet)
           }
-          testSets.push(testSet)
         }
       }
     }

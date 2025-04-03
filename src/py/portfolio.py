@@ -21,31 +21,37 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     isHold = False
     firstI = 0
     portfolio["original_hold_price"] = 0
-    portfolio["original_hold_value"] = 0
+    original_hold_price = portfolio["original_hold_price"].to_numpy()
     for i in range(len(portfolio)):
         if not isHold and portfolio["signal"].iloc[i] == 1:
             isHold = True
             firstI = i
-            portfolio["original_hold_price"].iloc[i] = portfolio["bid_close"].iloc[i]
+            original_hold_price[i] = portfolio["bid_close"].iloc[i]
         elif isHold and i > firstI and portfolio["signal"].iloc[i] == 1:
-            portfolio["original_hold_price"].iloc[i] = portfolio["original_hold_price"].iloc[firstI]
+            original_hold_price[i] = original_hold_price[firstI]
         elif isHold and portfolio["signal"].iloc[i] == 0:
             isHold = False
+    portfolio["original_hold_price"] = original_hold_price
 
+    portfolio["original_hold_value"] = 0
     portfolio["original_hold_value"] = portfolio["bid_close"]*portfolio["signal"] - portfolio["original_hold_price"]
     portfolio["max_hold_value"] = portfolio["original_hold_value"].cummax()
         
-    # calculate the t/p value for each signal and reset the signal to 0 after the t/p is reached
+    signal = portfolio["signal"].to_numpy()
+
+    take_profit_count = 0
     for i in range(len(portfolio)):
-        if portfolio["original_hold_value"].iloc[i] > 1 and portfolio["signal"].iloc[i] == 1:
-            print("take profit at", i, portfolio["original_hold_value"].iloc[i])
+        if portfolio["original_hold_value"].iloc[i] > 1.5:
+            take_profit_count += 1
             for j in range(i, len(portfolio)):
                 if portfolio["signal"].iloc[j] == 1:
-                    portfolio["signal"].iloc[j] = 0
+                    signal[j] = 0
                 else:
                     break
-    
+
+    portfolio["signal"] = signal
     portfolio["position"] = portfolio["signal"].diff()
+    print("take profits", take_profit_count)
 
     # portfolio["current_signal"] = portfolio["position"].cumsum()
     portfolio["buy_signals"] = abs(portfolio["position"].where(portfolio["position"] == 1, 0))

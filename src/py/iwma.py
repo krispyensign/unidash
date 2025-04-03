@@ -39,7 +39,7 @@ def iwma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.Data
     if df.get(column, None) is None:
         raise ValueError(f"df must contain the provided column {column}")
 
-    weights = np.arange(period + 1, 1)
+    weights = np.arange(period + 1, 1, -1)
     df["IWMA"] = df[column].rolling(period).apply(
         lambda x: np.dot(x, weights) / np.sum(weights), raw=True
     )
