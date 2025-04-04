@@ -84,6 +84,10 @@ export function getArgs(): Arguments {
         description: `The strategy name. This one of:
           ${strategies.join(', ')}`,
       },
+      chartSaveFile: {
+        type: 'string',
+        description: 'The file to save the chart to',
+      },
     })
     .parseSync()
 }

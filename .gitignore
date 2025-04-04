@@ -17,3 +17,4 @@ private.json
 .venv/
 .cache/
 config.json
+*.csv

@@ -39,10 +39,13 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
         
     signal = portfolio["signal"].to_numpy()
 
-    take_profit_count = 0
+    take_profit_amt = .5
+    stop_loss_amt = -.25
     for i in range(len(portfolio)):
-        if portfolio["original_hold_value"].iloc[i] > 1.5:
-            take_profit_count += 1
+        if portfolio["signal"].iloc[i] == 0:
+            continue
+        if (portfolio["original_hold_value"].iloc[i] > take_profit_amt
+            or portfolio["original_hold_value"].iloc[i] < stop_loss_amt):
             for j in range(i, len(portfolio)):
                 if portfolio["signal"].iloc[j] == 1:
                     signal[j] = 0
@@ -51,7 +54,6 @@ def portfolio(data: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
 
     portfolio["signal"] = signal
     portfolio["position"] = portfolio["signal"].diff()
-    print("take profits", take_profit_count)
 
     # portfolio["current_signal"] = portfolio["position"].cumsum()
     portfolio["buy_signals"] = abs(portfolio["position"].where(portfolio["position"] == 1, 0))

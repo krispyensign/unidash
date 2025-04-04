@@ -6,7 +6,7 @@ import { DbService } from './db'
 import { ConfigToken } from './config'
 import { ethers } from 'ethers'
 import { chart, loadDataFrame } from './pytrade'
-import { off } from 'process'
+import fs from 'fs'
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +20,7 @@ export class ChartService {
   token0: string
   token1: string
   swapTokens: boolean
+  chartSaveFile: string | undefined
 
   constructor(dbService: DbService, @Inject(ConfigToken) config: Arguments) {
     this.dbService = dbService
@@ -42,6 +43,7 @@ export class ChartService {
     this.token1 = config.token1
     this.swapTokens = config.tokenSwap
     this.daysToFetch = config.daysToFetch
+    this.chartSaveFile = config.chartSaveFile
   }
 
   public async GetOHLC(date: Date, offset: number): Promise<DataFrame> {
@@ -102,6 +104,13 @@ export class ChartService {
     // load dataframe
     const df = await loadDataFrame(JSON.stringify(ohlcData))
     console.log('loaded oanda data %d', ohlcData.length)
+
+    if (this.chartSaveFile) {
+      // save a csv file to disk using built in node io
+      const csvData = df.to_csv()
+      fs.writeFileSync(this.chartSaveFile, csvData)
+    }
+
     return df
   }
 

@@ -6,12 +6,12 @@
 - [X] Run using the accepted testcase
 - [X] Push Alerting
 - [X] Configs
-- [ ] Trailing S/L or T/P
+- [X] Trailing S/L or T/P
+- [X] Determine if it is needed to refactor or replace python / pandas service
+- [ ] Automated trading
 - [ ] Change to using bigint instead of float
 - [ ] Dashboard using plotly or D3
-- [ ] Determine if it is needed to refactor or replace python / pandas service
 - [ ] Better logging
-- [ ] Automated trading
 - [ ] Does this need a workflow engine
 - [ ] Rewrite services in .net and have plotting in typescript?
 
