@@ -2,33 +2,56 @@
 
 Perform signal generation and backtesting using WMA and Heiken Ashi.
 
-## Quick Setup
+## WARNING
 
-* Install mongodb
-* Install node
-* npm install
-* npm run build
-* npm run -- --config ./config.json
+This is being revised and currently does not work as originally intended and only
+works with Oanda FOREX.  
 
-## Config
+## Current interim steps
 
-To see all the options `npm run start -- --help`
+```shell
+cd src/py
+pip install .
 
-A json file can be provided for the config using `npm run start -- --config ./config.json`
+# i.e. for bot mode
+main.py bot $YOUR_OANDA_TOKEN USD_JPY
 
-Here is the format:
-
-```json
-{
-    "heartbeat": "<Your ntfy.sh topic>",  // heartbeat topic ntfy.sh
-    "priority": "<Your other ntfy.sh topic>", // priority topic ntfy.sh
-    "token0": "0x4200000000000000000000000000000000000006",  // token0 contract address
-    "token1": "0x570b1533F6dAa82814B25B62B5c7c4c55eB83947",  // token1 contract address
-    "strategyWmaColumn": "ha_open",  // pandas dataframe column name to use for wma calculation
-    "strategySignalColumn": "ha_open", // pandas dataframe candle column name to use for the 
-    "strategyName": "WMA_HEIKEN_ASHI_INVERSE", // strategy name selected
-    "graphqlEndpoint": "https://gateway.thegraph.com/api/<Your API Token>/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1",
-    "daysToFetch": 60, // needs to be at least 21 days for WMA-Heiken Ashi indicator
-    "mongodbEndpoint": "mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.4.2"
-}
+# i.e. for backtest mode
+main.py backtest some_file.csv
 ```
+
+## Results
+
+Currently it does appear to result in a profit as described in the article
+[Best Indicators For Day Trading]<https://www.liberatedstocktrader.com/best-indicators-for-day-trading/#wma>
+
+This is a homegrown application and does not replace perfectly valid trading
+solutions already available. DO NOT USE WITHOUT FIRST TESTING YOURSELF.
+Per section 7 of the license:
+
+```text
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+```
+
+## Future Work
+
+Save OHLC data and various backtest scenarios to MS SQL
+Using MS SQL for model prediction
+
+## TODO
+
+- [ ] automated trading using python
+- [ ] save OHLC and results to ms sql using sqlalchemy
+- [ ] remove all unused typescript code
+- [ ] asp.net service to periodically perform tasks
+- [ ] embed python wma-ha pipeline(s) in ms sql
+- [ ] perform backtests using ms sql
+- [ ] mine data using ms sql predictive capabilities

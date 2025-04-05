@@ -324,6 +324,22 @@ def backtest(filename: str):
 
 
 def bot(token: str, instrument: str) -> None:
+    """Continuously fetches OHLC data from Oanda, processes it, and reports trading results.
+
+    This function establishes a connection to the Oanda API using the provided token and
+    instrument. It enters an infinite loop where it fetches the latest OHLC data, processes
+    it through a pipeline to generate trading signals, calculates the portfolio value,
+    and prints a report of the trading results. The function handles exceptions during
+    data fetching and retries after a short delay.
+
+    Parameters
+    ----------
+    token : str
+        The API token for authenticating with the Oanda service.
+    instrument : str
+        The financial instrument for which to fetch OHLC data.
+
+    """
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     while True:
         df: pd.DataFrame
@@ -336,6 +352,7 @@ def bot(token: str, instrument: str) -> None:
         print(df.tail(1).to_csv())
         df = wma_ha_pipeline(df, "ha_low", 20, "ha_ask_open", "ha_bid_close")
         res = portfolio(df, "ask_open", "bid_open")
+        # TODO: place orders or close orders
         report(*res)
         sleep(30)
 
@@ -412,6 +429,7 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
                 "ask_low": candle.ask.l,
                 "ask_close": candle.ask.c,
             }
+
     return resp
 
 
