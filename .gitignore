@@ -18,3 +18,4 @@ private.json
 .cache/
 config.json
 *.csv
+.vscode/

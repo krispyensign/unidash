@@ -41,8 +41,10 @@ def wma(df: pd.DataFrame, period: int = 20, column: str = "ha_open") -> pd.DataF
         raise ValueError(f"df must contain the provided column {column}")
 
     weights = np.arange(1, period + 1)
-    df["WMA"] = df[column].rolling(period).apply(
-        lambda x: np.dot(x, weights) / np.sum(weights), raw=True
+    df["WMA"] = (
+        df[column]
+        .rolling(period)
+        .apply(lambda x: np.dot(x, weights) / np.sum(weights), raw=True)
     )
 
     return df

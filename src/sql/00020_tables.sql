@@ -24,24 +24,26 @@ if not exists (select name from sys.tables where name = N'ohlchistory')
 if exists (select name from sys.tables where name = N'ohlcstaging')
     DROP TABLE [dbo].[ohlcstaging];
 
+-- timestamp,_id,ask_close,ask_high,ask_low,ask_open,bid_close,bid_high,bid_low,bid_open,close,high,low,open,token0,token1
+
 if not exists (select name from sys.tables where name = N'ohlcstaging')
     create table [dbo].[ohlcstaging] (
         [timestamp] [varchar](50) NOT NULL,
         [_id] [varchar](50) NOT NULL,
-        [token0] [varchar](50) NOT NULL,
-        [token1] [varchar](50) NOT NULL,
-        [open] [varchar](50) NOT NULL,
-        [high] [varchar](50) NOT NULL,
-        [low] [varchar](50) NOT NULL,
-        [close] [varchar](50) NOT NULL,
-        [ask_open] [varchar](50) NOT NULL,
+        [ask_close] [varchar](50) NOT NULL,
         [ask_high] [varchar](50) NOT NULL,
         [ask_low] [varchar](50) NOT NULL,
-        [ask_close] [varchar](50) NOT NULL,
-        [bid_open] [varchar](50) NOT NULL,
+        [ask_open] [varchar](50) NOT NULL,
+        [bid_close] [varchar](50) NOT NULL,
         [bid_high] [varchar](50) NOT NULL,
         [bid_low] [varchar](50) NOT NULL,
-        [bid_close] [varchar](50) NOT NULL,
+        [bid_open] [varchar](50) NOT NULL,
+        [close] [varchar](50) NOT NULL,
+        [high] [varchar](50) NOT NULL,
+        [low] [varchar](50) NOT NULL,
+        [open] [varchar](50) NOT NULL,
+        [token0] [varchar](50) NOT NULL,
+        [token1] [varchar](50) NOT NULL
     );
 
 bulk insert [dbo].[ohlcstaging] 

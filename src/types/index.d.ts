@@ -146,7 +146,6 @@ export interface Arguments {
   strategySignalColumn: string | undefined
   strategyName: string | undefined
   strategyWmaPeriod: number
-  chartSaveFile: string | undefined
 }
 
 export type OHLC = {
