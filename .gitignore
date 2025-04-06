@@ -21,6 +21,7 @@ config.json
 .vscode/
 .mypy_cache/
 lib/
+lib
 lib64/
 lib64
 .lock
