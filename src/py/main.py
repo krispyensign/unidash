@@ -1,10 +1,13 @@
 """Main module."""
+
 from datetime import datetime, timedelta
 import sys
 from time import sleep  # noqa: D100
 import pandas as pd
 import numpy as np
-import v20
+import v20  # type: ignore
+
+Thursday = 4
 
 
 def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
@@ -345,11 +348,12 @@ def bot(token: str, instrument: str) -> None:
         df: pd.DataFrame
         try:
             df = getOandaOHLC(ctx, instrument)
+            print(df.head(1).to_csv())
+            print(df.tail(1).to_csv())
         except Exception as err:  # noqa: E722
             print(err)
             sleep(5)
 
-        print(df.tail(1).to_csv())
         df = wma_ha_pipeline(df, "ha_low", 20, "ha_ask_open", "ha_bid_close")
         res = portfolio(df, "ask_open", "bid_open")
         # TODO: place orders or close orders
@@ -405,16 +409,22 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
             "ask_close",
         ]
     )
+
+    daydelta = 1
+    weekday = datetime.now().weekday()
+    if weekday > Thursday:
+        daydelta = weekday - 3
+
     resp = ctx.instrument.candles(
         instrument=instrment,
         granularity="M5",
-        fromTime=(datetime.now() - timedelta(days=2)).timestamp(),
+        fromTime=(datetime.now() - timedelta(days=daydelta)).timestamp(),
         price="MAB",
     )
     if resp.body["candles"]:
         candles: v20.instrument.Candlesticks = resp.body["candles"]
         for i, candle in enumerate(candles):
-            df.loc[i] = {
+            df.loc[i] = {  # type: ignore
                 "timestamp": candle.time,
                 "open": candle.mid.o,
                 "high": candle.mid.h,
@@ -430,7 +440,7 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
                 "ask_close": candle.ask.c,
             }
 
-    return resp
+    return df
 
 
 if __name__ == "__main__":

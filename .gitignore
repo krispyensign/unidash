@@ -19,3 +19,4 @@ private.json
 config.json
 *.csv
 .vscode/
+.mypy_cache/
