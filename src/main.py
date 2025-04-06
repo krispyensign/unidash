@@ -111,8 +111,6 @@ def portfolio(
     )
 
 
-
-
 def report(
     df: pd.DataFrame,
     result: bool,
@@ -169,6 +167,29 @@ def backtest(filename: str):
         header=0,
         parse_dates=["timestamp"],
     )
+
+    kernel(df)
+
+
+def kernel(df: pd.DataFrame) -> pd.DataFrame:
+    """Process a DataFrame containing trading data.
+
+    This function processes a DataFrame containing trading data and generate trading signals
+    using Heikin-Ashi candlesticks and weighted moving average (wma).
+
+    TODO: support pipelines other than wma_ha
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing trading data.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the trading signals and portfolio calculations.
+
+    """
     # signal using the ha_ask_open and ha_bid_close prices
     # signal and trigger interval could appears as this
     # 0 0 1 1 1 0 0 - 1 above or 0 below the wma
@@ -220,10 +241,8 @@ def bot(token: str, instrument: str) -> None:
             print(err)
             sleep(5)
 
-        df = wma_ha(df, "ha_low", 20, "ha_ask_open", "ha_bid_close")
-        res = portfolio(df, "ask_open", "bid_open")
+        df = kernel(df)
         # TODO: place orders or close orders
-        report(*res)
         sleep(30)
 
 

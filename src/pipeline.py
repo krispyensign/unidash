@@ -1,8 +1,10 @@
 """Pipelines for generating trading signals."""
+
 import pandas as pd
 import talib
 
 from chart import heikin_ashi
+
 
 def wma_ha(
     data: pd.DataFrame,

@@ -1,9 +1,11 @@
 """Get OHLC data from an exchange and convert it into a pandas DataFrame."""
+
 from datetime import datetime, timedelta
 import v20
 import pandas as pd
 
 Thursday = 4
+
 
 def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
     # create dataframe with candles
