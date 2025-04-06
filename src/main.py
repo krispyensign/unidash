@@ -1,114 +1,16 @@
 """Main module."""
 
-from datetime import datetime, timedelta
 import sys
 from time import sleep  # noqa: D100
 import pandas as pd
 import numpy as np
-import v20  # type: ignore
+import v20
+
+from exchange import getOandaOHLC
+from pipeline import wma_ha
+
 
 Thursday = 4
-
-
-def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
-    """Generate Heikin Ashi candlesticks for a given dataframe.
-
-    Heikin Ashi is a Japanese chart type that is used to identify trends and
-    patterns in financial markets. It is similar to traditional candlestick charts,
-    but it uses the average of the high, low, and closing prices to calculate
-    the body of the candle.  This function also generates Heikin Ashi candlesticks
-    for the bid and ask prices.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        A DataFrame containing OHLC data.
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing Heikin Ashi candlesticks.  The candlesticks are
-        added as new columns to the original DataFrame.  They are named
-        'ha_close', 'ha_open', 'ha_high', and 'ha_low'. The 'ha_bid_close',
-        'ha_ask_close', 'ha_bid_open', 'ha_ask_open', 'ha_bid_high', 'ha_ask_high',
-        'ha_bid_low', and 'ha_ask_low' are also added.
-
-    """
-    df.reset_index(inplace=True)
-
-    df["ha_close"] = (df["open"] + df["high"] + df["low"] + df["close"]) / 4
-    df["ha_bid_close"] = (
-        df["bid_open"] + df["bid_high"] + df["bid_low"] + df["bid_close"]
-    ) / 4
-    df["ha_ask_close"] = (
-        df["ask_open"] + df["ask_high"] + df["ask_low"] + df["ask_close"]
-    ) / 4
-
-    df.at[0, "ha_open"] = df.at[0, "open"]
-    for i in range(1, len(df)):
-        df.at[i, "ha_open"] = (df.at[i - 1, "ha_open"] + df.at[i - 1, "ha_close"]) / 2
-
-    df.at[0, "ha_bid_open"] = df.at[0, "bid_open"]
-    for i in range(1, len(df)):
-        df.at[i, "ha_bid_open"] = (
-            df.at[i - 1, "ha_bid_open"] + df.at[i - 1, "ha_bid_close"]
-        ) / 2
-
-    df.at[0, "ha_ask_open"] = df.at[0, "ask_open"]
-    for i in range(1, len(df)):
-        df.at[i, "ha_ask_open"] = (
-            df.at[i - 1, "ha_ask_open"] + df.at[i - 1, "ha_ask_close"]
-        ) / 2
-
-    df["ha_high"] = df[["high", "ha_open", "ha_close"]].max(axis=1)
-    df["ha_low"] = df[["low", "ha_open", "ha_close"]].min(axis=1)
-
-    df["ha_bid_high"] = df[["bid_high", "ha_bid_open", "ha_bid_close"]].max(axis=1)
-    df["ha_bid_low"] = df[["bid_low", "ha_bid_open", "ha_bid_close"]].min(axis=1)
-
-    df["ha_ask_high"] = df[["ask_high", "ha_ask_open", "ha_ask_close"]].max(axis=1)
-    df["ha_ask_low"] = df[["ask_low", "ha_ask_open", "ha_ask_close"]].min(axis=1)
-
-    df.set_index("timestamp", inplace=True)
-
-    return df
-
-
-def wma(df: pd.DataFrame, period: int = 288, column: str = "ha_low") -> pd.DataFrame:
-    """Calculate the weighted moving average (wma) of a column of a given DataFrame.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame containing the input column to which the wma will be applied.
-    period : int, optional
-        The period in days. The default is 288.
-    column : str, optional
-        The column to which the wma will be applied. The default is 'ha_low'.
-
-    Returns
-    -------
-    pd.Dataframe
-        The DataFrame with the 'wma' column added.
-
-    Raises
-    ------
-    ValueError
-        If wma_period is not greater than 0.
-    ValueError
-        If df is empty.
-    ValueError
-        If df does not contain the provided column.
-
-    """
-    weights = np.arange(1, period + 1)
-    df["wma"] = (
-        df[column]
-        .rolling(period)
-        .apply(lambda x: np.dot(x, weights) / np.sum(weights), raw=True)
-    )
-
-    return df
 
 
 def generate_signals(
@@ -209,43 +111,6 @@ def portfolio(
     )
 
 
-def wma_ha_pipeline(
-    data: pd.DataFrame,
-    wmaSourceColumn: str = "ha_low",
-    wmaPeriod: int = 20,
-    buyColumn: str = "ha_ask_high",
-    sellColumn: str = "ha_bid_low",
-) -> pd.DataFrame:
-    """Process the input DataFrame.
-
-    This function processes the input DataFrame to generate trading signals using a weighted moving
-    average (wma) of Heikin-Ashi candlesticks.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        The input DataFrame containing the trading data.
-    wmaPeriod : int, optional
-        The period for the wma calculation. The default is 20.
-    wmaSourceColumn : str, optional
-        The column name of the Heikin-Ashi candlesticks to use for the wma calculation.
-        The default is "ha_low".
-    buyColumn : str, optional
-        The column name of the prices to use for buying. The default is "ask_open".
-    sellColumn : str, optional
-        The column name of the prices to use for selling. The default is "bid_open".
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame with the trading signals added.
-
-    """
-    data = heikin_ashi(data)
-    data = wma(data, wmaPeriod, wmaSourceColumn)
-    data = generate_signals(data, buyColumn, sellColumn)
-
-    return data
 
 
 def report(
@@ -311,7 +176,8 @@ def backtest(filename: str):
     # that means that the price to open the trade at would be the open price
     # if we check that the open price is above the wma then we buy
     # the price to close the trade at would be the close price below the wma
-    df = wma_ha_pipeline(df, "ha_low", 20, "ha_ask_open", "ha_bid_close")
+    df = wma_ha(df, "ha_low", 20)
+    df = generate_signals(df, "ha_ask_open", "ha_bid_close")
 
     # calculate the portfolio:
     # When the trigger is 1, use the ask_open price (buy signal)
@@ -354,93 +220,11 @@ def bot(token: str, instrument: str) -> None:
             print(err)
             sleep(5)
 
-        df = wma_ha_pipeline(df, "ha_low", 20, "ha_ask_open", "ha_bid_close")
+        df = wma_ha(df, "ha_low", 20, "ha_ask_open", "ha_bid_close")
         res = portfolio(df, "ask_open", "bid_open")
         # TODO: place orders or close orders
         report(*res)
         sleep(30)
-
-
-def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
-    # create dataframe with candles
-    """Get OHLC data from Oanda and convert it into a pandas DataFrame.
-
-    Parameters
-    ----------
-    ctx : v20.Context
-        The Oanda API context.
-    instrment : str
-        The instrument to get the OHLC data for.
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing the OHLC data with the following columns:
-
-        - timestamp
-        - open
-        - high
-        - low
-        - close
-        - bid_open
-        - bid_high
-        - bid_low
-        - bid_close
-        - ask_open
-        - ask_high
-        - ask_low
-        - ask_close
-
-    """
-    df = pd.DataFrame(
-        columns=[
-            "timestamp",
-            "open",
-            "high",
-            "low",
-            "close",
-            "bid_open",
-            "bid_high",
-            "bid_low",
-            "bid_close",
-            "ask_open",
-            "ask_high",
-            "ask_low",
-            "ask_close",
-        ]
-    )
-
-    daydelta = 1
-    weekday = datetime.now().weekday()
-    if weekday > Thursday:
-        daydelta = weekday - 3
-
-    resp = ctx.instrument.candles(
-        instrument=instrment,
-        granularity="M5",
-        fromTime=(datetime.now() - timedelta(days=daydelta)).timestamp(),
-        price="MAB",
-    )
-    if resp.body["candles"]:
-        candles: v20.instrument.Candlesticks = resp.body["candles"]
-        for i, candle in enumerate(candles):
-            df.loc[i] = {  # type: ignore
-                "timestamp": candle.time,
-                "open": candle.mid.o,
-                "high": candle.mid.h,
-                "low": candle.mid.l,
-                "close": candle.mid.c,
-                "bid_open": candle.bid.o,
-                "bid_high": candle.bid.h,
-                "bid_low": candle.bid.l,
-                "bid_close": candle.bid.c,
-                "ask_open": candle.ask.o,
-                "ask_high": candle.ask.h,
-                "ask_low": candle.ask.l,
-                "ask_close": candle.ask.c,
-            }
-
-    return df
 
 
 if __name__ == "__main__":

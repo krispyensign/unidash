@@ -11,12 +11,12 @@ dependencies = [
     "v20",
     "pandas",
     "numpy",
-    "numba",
+    "ta-lib",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "*.py",
+    "src/*.py",
 ]
 
 [project.optional-dependencies]
