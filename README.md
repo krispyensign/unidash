@@ -22,7 +22,7 @@ main.py backtest some_file.csv
 
 ## Results
 
-Currently it does appear to result in a profit as described in the article
+Currently it does appear it could result in a profit as described in the article
 [Best Indicators For Day Trading](https://www.liberatedstocktrader.com/best-indicators-for-day-trading/#wma)
 
 This is a homegrown application and does not replace perfectly valid trading
