@@ -12,6 +12,7 @@ dependencies = [
     "pandas",
     "numpy",
     "ta-lib",
+    "pyyaml"
 ]
 
 [tool.hatch.build.targets.wheel]

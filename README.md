@@ -7,24 +7,6 @@ Perform signal generation and backtesting using WMA and Heiken Ashi.
 This is being revised and currently does not work as originally intended and only
 works with Oanda FOREX.  
 
-## Current interim steps
-
-```shell
-cd src/py
-pip install .
-
-# i.e. for bot mode
-main.py bot $YOUR_OANDA_TOKEN USD_JPY
-
-# i.e. for backtest mode
-main.py backtest some_file.csv
-```
-
-## Results
-
-Currently it does appear it could result in a profit as described in the article
-[Best Indicators For Day Trading](https://www.liberatedstocktrader.com/best-indicators-for-day-trading/#wma)
-
 This is a homegrown application and does not replace perfectly valid trading
 solutions already available. DO NOT USE WITHOUT FIRST TESTING YOURSELF.
 Per section 7 of the license:
@@ -41,6 +23,26 @@ Per section 7 of the license:
       risks associated with Your exercise of permissions under this License.
 ```
 
+This application is provided "AS IS" for educational purposes only.
+
+## Current interim steps
+
+```shell
+cd src/py
+pip install .
+
+# i.e. for bot mode
+main.py bot $YOUR_OANDA_TOKEN $YOUR_OANDA_ACCOUNT_ID USD_JPY
+
+# i.e. for backtest mode
+main.py backtest some_file.csv
+```
+
+## Results
+
+Currently it does appear it could result in a profit as described in the article
+[Best Indicators For Day Trading](https://www.liberatedstocktrader.com/best-indicators-for-day-trading/#wma)
+
 ## Future Work
 
 Save OHLC data and various backtest scenarios to MS SQL
@@ -48,9 +50,11 @@ Using MS SQL for model prediction
 
 ## TODO
 
-- [ ] automated trading using python
+- [X] automated trading using python
+- [ ] integration testing with Oanda sandbox
+- [ ] tune ATR
 - [ ] save OHLC and results to ms sql using sqlalchemy
-- [ ] remove all unused typescript code
+- [X] remove all unused typescript code
 - [ ] asp.net service to periodically perform tasks
 - [ ] embed python wma-ha pipeline(s) in ms sql
 - [ ] perform backtests using ms sql

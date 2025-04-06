@@ -1,12 +1,14 @@
 """Main module."""
 
+from datetime import datetime
 import sys
 from time import sleep  # noqa: D100
 import pandas as pd
 import numpy as np
+import talib
 import v20
 
-from exchange import getOandaOHLC
+from exchange import close_order, getOandaOHLC, getOandaBalance, place_order
 from pipeline import wma_ha
 
 
@@ -81,7 +83,6 @@ def portfolio(
     # use the ask_close price
     # calculate the buy spend
     portfolio["buy_spend"] = (portfolio["buy_signals"] * portfolio[buyColumn]).cumsum()
-    # portfolio["long_credit"] = portfolio["buy_spend"] * .015
 
     # if the trigger is -1 then it is a sell signal, if its a sell signal then
     # use the bid_close price
@@ -190,6 +191,17 @@ def kernel(df: pd.DataFrame) -> pd.DataFrame:
         A DataFrame containing the trading signals and portfolio calculations.
 
     """
+    # calculate the ATR and multiply it by 1.5 for the trailing stop loss
+    df["atr"] = (
+        talib.ATR(
+            df["high"],
+            df["low"],
+            df["close"],
+            timeperiod=20,
+        )
+        * 1.5
+    )
+
     # signal using the ha_ask_open and ha_bid_close prices
     # signal and trigger interval could appears as this
     # 0 0 1 1 1 0 0 - 1 above or 0 below the wma
@@ -212,8 +224,12 @@ def kernel(df: pd.DataFrame) -> pd.DataFrame:
     # print the results
     report(*res)
 
+    return res[0]
 
-def bot(token: str, instrument: str) -> None:
+
+def bot(
+    token: str, account_id: str, instrument: str, amount: float | None = None
+) -> None:
     """Continuously fetches OHLC data from Oanda, processes it, and reports trading results.
 
     This function establishes a connection to the Oanda API using the provided token and
@@ -226,13 +242,20 @@ def bot(token: str, instrument: str) -> None:
     ----------
     token : str
         The API token for authenticating with the Oanda service.
+    account_id : str
+        The account ID associated with the Oanda account.
     instrument : str
         The financial instrument for which to fetch OHLC data.
+    amount : float, optional
+        The amount of money to be invested in the trading strategy. If not provided,
+        the function will use half of the entire balance of the account.
 
     """
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
+    trade_id = -1
     while True:
         df: pd.DataFrame
+        startTime = datetime.now()
         try:
             df = getOandaOHLC(ctx, instrument)
             print(df.head(1).to_csv())
@@ -242,7 +265,31 @@ def bot(token: str, instrument: str) -> None:
             sleep(5)
 
         df = kernel(df)
-        # TODO: place orders or close orders
+
+        quote_net_asset = df["quote_net_asset"].iloc[-1]
+        if quote_net_asset < 0:
+            print(
+                "%s losing money %d",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                quote_net_asset,
+            )
+            sleep(300)
+            continue
+
+        trigger = df["trigger"].iloc[-1]
+        if trigger != 0:
+            if amount is None:
+                balance = getOandaBalance(ctx, account_id)
+                amount = (balance // 2) * 50
+
+            if trigger == 1 and trade_id == -1:
+                trade_id = place_order(ctx, account_id, instrument, amount)
+            elif trigger == -1 and trade_id != -1:
+                close_order(ctx, account_id, trade_id)
+                trade_id = -1
+
+        endTime = datetime.now()
+        print(f"runtime: {endTime - startTime}")
         sleep(30)
 
 
@@ -250,12 +297,12 @@ if __name__ == "__main__":
     if "backtest" in sys.argv[1]:
         backtest(sys.argv[2])
     elif "bot":
-        bot(sys.argv[1], sys.argv[2])
+        bot(sys.argv[1], sys.argv[2], sys.argv[3])
     else:
         print(sys.argv)
         print("""
             WMA HEIKEN ASHI
               Usage: 
                 python main.py backtest <some csv file>
-                python main.py bot <token> <instrument>
+                python main.py bot <token> <account_id> <instrument>
               """)

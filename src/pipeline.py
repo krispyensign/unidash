@@ -33,6 +33,6 @@ def wma_ha(
 
     """
     data = heikin_ashi(data)
-    data = talib.WMA(data[wmaSourceColumn], wmaPeriod)
+    data["wma"] = talib.WMA(data[wmaSourceColumn], wmaPeriod)
 
     return data
