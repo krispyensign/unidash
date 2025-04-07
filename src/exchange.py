@@ -142,7 +142,6 @@ def place_order(
     order: v20.order.MarketOrder = v20.order.MarketOrder(
         instrument=instrument,
         units=amount,
-        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(distance=0.5),
     )
     resp = ctx.order.create(
         account_id,

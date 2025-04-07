@@ -59,6 +59,40 @@ def generate_signals(
 
     # check if the Heikin-Ashi low is less than the wma and the trigger is not 1
     df.loc[(df[sellColumn] < df["wma"]) & (df["trigger"] != 1), "signal"] = 0
+    df["trigger"] = df["signal"].diff()
+
+    return df
+
+
+def apply_trailing_stop_loss(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply a trailing stop loss to the DataFrame.
+
+    This function applies a trailing stop loss to the DataFrame based on the 'signal' column.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the trading data.
+
+    Returns
+    -------
+    pd.DataFrame
+        The DataFrame with the 'trailing_stop_loss' column added.
+
+    """
+    # set the trailing stop loss
+    df["trailing_stop_loss"] = (
+        df[df["signal"] == 1]
+        .groupby((df["signal"] == 1).cumsum())["bid_high"]
+        .transform(lambda x: x.rolling(window=len(x)).max())
+        - df["atr"]
+    )
+
+    # set the signal to 0 if the trailing stop loss is less than the bid close
+    df.loc[
+        (df["bid_close"] < df["trailing_stop_loss"]) & (df["trigger"] != 1),
+        "signal",
+    ] = 0
 
     df["trigger"] = df["signal"].diff()
 
@@ -82,28 +116,11 @@ def portfolio(
     """
     portfolio = data[(data["close"] > 0)]
 
-    # set the trailing stop loss
-    portfolio["trailing_stop_loss"] = (
-        portfolio[portfolio["signal"] == 1]
-        .groupby((portfolio["signal"] == 1).cumsum())["bid_high"]
-        .transform(lambda x: x.rolling(window=len(x)).max())
-        - portfolio["atr"]
-    )
-    # set the signal to 0 if the trailing stop loss is less than the bid close
-    portfolio["ts_signal"] = portfolio["signal"].copy()
-    portfolio.loc[
-        (portfolio["bid_close"] < portfolio["trailing_stop_loss"])
-        & (portfolio["trigger"] != 1),
-        "ts_signal",
-    ] = 0
-    portfolio["ts_trigger"] = portfolio["ts_signal"].diff()
-
-    # portfolio["current_signal"] = portfolio["ts_trigger"].cumsum()
     portfolio["buy_signals"] = abs(
-        portfolio["ts_trigger"].where(portfolio["ts_trigger"] == 1, 0)
+        portfolio["trigger"].where(portfolio["trigger"] == 1, 0)
     )
     portfolio["sell_signals"] = abs(
-        portfolio["ts_trigger"].where(portfolio["ts_trigger"] == -1, 0)
+        portfolio["trigger"].where(portfolio["trigger"] == -1, 0)
     )
     portfolio["num_buy_signals"] = portfolio["buy_signals"].cumsum()
     portfolio["num_sell_signals"] = portfolio["sell_signals"].cumsum()
@@ -224,15 +241,8 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
         A DataFrame containing the trading signals and portfolio calculations.
 
     """
-    # calculate the ATR and multiply it by .5 for the trailing stop loss
-    df["atr"] = (
-        talib.ATR(
-            df["high"].to_numpy(),
-            df["low"].to_numpy(),
-            df["close"].to_numpy(),
-            timeperiod=WMA_PERIOD,
-        )
-    ) * 1.5
+    # calculate the ATR for the trailing stop loss
+    df = atr(df)
 
     # signal using the ha_ask_open and ha_bid_close prices
     # signal and trigger interval could appears as this
@@ -243,6 +253,9 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     # the price to close the trade at would be the close price below the wma
     df = wma_ha(df, "ha_low", WMA_PERIOD)
     df = generate_signals(df, "ha_ask_high", "ha_bid_low")
+
+    # apply trailing stop loss
+    df = apply_trailing_stop_loss(df)
 
     # calculate the portfolio:
     # When the trigger is 1, use the ask_open price (buy signal)
@@ -256,7 +269,33 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     return res
 
 
-def bot(
+def atr(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate the ATR and multiply it by .5 for the trailing stop loss.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing trading data.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the ATR and the trailing stop loss.
+
+    """
+    df["atr"] = (
+        talib.ATR(
+            df["high"].to_numpy(),
+            df["low"].to_numpy(),
+            df["close"].to_numpy(),
+            timeperiod=WMA_PERIOD,
+        )
+    ) * 1.5
+
+    return df
+
+
+def bot(  # noqa: C901, PLR0915
     token: str, account_id: str, instrument: str, amount: float | None = None
 ) -> None:
     """Bot that trades on Oanda.
