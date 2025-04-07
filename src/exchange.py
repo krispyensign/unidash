@@ -1,7 +1,7 @@
 """Get OHLC data from an exchange and convert it into a pandas DataFrame."""
 
 from datetime import datetime, timedelta
-import v20
+import v20 # type: ignore
 import pandas as pd
 
 Thursday = 4
@@ -116,7 +116,7 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
 
 def place_order(
     ctx: v20.Context, account_id: str, instrument: str, amount: float
-) -> str:
+) -> int:
     """Place an order on the Oanda API.
 
     Parameters
@@ -134,7 +134,7 @@ def place_order(
 
     Returns
     -------
-    str
+    int
         The order ID of the placed order.
 
     """
@@ -150,7 +150,7 @@ def place_order(
     )
 
     # get the trade id from the response body and return it if it exists
-    trade_id: str
+    trade_id: int
     if resp.body is not None:
         if "orderFillTransaction" in resp.body:
             result: v20.transaction.OrderFillTransaction = resp.body[
@@ -168,7 +168,7 @@ def place_order(
     return trade_id
 
 
-def close_order(ctx: v20.Context, account_id: str, trade_id: str) -> None:
+def close_order(ctx: v20.Context, account_id: str, trade_id: int) -> None:
     """Close an order on the Oanda API.
 
     Parameters
