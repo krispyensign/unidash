@@ -337,7 +337,7 @@ if __name__ == "__main__":
     if "backtest" in sys.argv[1]:
         backtest(sys.argv[2])
     elif "bot":
-        bot(sys.argv[1], sys.argv[2], sys.argv[3], 2500 // 2)
+        bot(sys.argv[1], sys.argv[2], sys.argv[3], 1000)
     else:
         print(sys.argv)
         print("""
