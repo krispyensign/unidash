@@ -1,7 +1,7 @@
 """Get OHLC data from an exchange and convert it into a pandas DataFrame."""
 
 from datetime import datetime, timedelta
-import v20 # type: ignore
+import v20  # type: ignore
 import pandas as pd
 
 Thursday = 4
@@ -181,7 +181,7 @@ def close_order(ctx: v20.Context, account_id: str, trade_id: int) -> None:
         The trade ID of the order to close.
 
     """
-    resp = ctx.order.cancel(account_id, trade_id)
+    resp = ctx.trade.close(account_id, trade_id)
 
     if resp.body is not None:
         if "orderRejectTransaction" in resp.body:

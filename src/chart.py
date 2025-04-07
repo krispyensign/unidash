@@ -1,5 +1,6 @@
 """Functions for generating charts."""
 
+import typing
 import pandas as pd
 
 
@@ -69,7 +70,7 @@ def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
 
 def ohlc(
     df: pd.DataFrame, timeFrame: str = "5Min", isSwapped: bool = False
-) -> tuple[pd.DataFrame, any]:
+) -> tuple[pd.DataFrame, typing.Any]:
     """Resample the input DataFrame into OHLC format for specified time intervals.
 
     This function takes a DataFrame containing raw trading data, calculates the

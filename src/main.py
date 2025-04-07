@@ -6,13 +6,14 @@ from time import sleep
 import pandas as pd
 import numpy as np
 import talib
-import v20 # type: ignore
+import v20  # type: ignore
 
 from exchange import close_order, getOandaOHLC, getOandaBalance, place_order
 from pipeline import wma_ha
 
 
 Thursday = 4
+WMA_PERIOD = 20
 
 
 def generate_signals(
@@ -42,8 +43,15 @@ def generate_signals(
 
     """
     df["signal"] = 0
+
+    # check if the Heikin-Ashi high is greater than the wma
     df.loc[df[buyColumn] > df["wma"], "signal"] = 1
-    df.loc[df[sellColumn] < df["wma"], "signal"] = 0
+    df["trigger"] = df["signal"].diff()
+
+    # check if the Heikin-Ashi low is less than the wma and the trigger is not 1
+    df.loc[(df[sellColumn] < df["wma"]) & (df["trigger"] != 1), "signal"] = 0
+
+    df["trigger"] = df["signal"].diff()
 
     return df
 
@@ -65,14 +73,24 @@ def portfolio(
     """
     portfolio = data[(data["close"] > 0)]
 
-    portfolio["trigger"] = portfolio["signal"].diff()
+    # set the trailing stop loss
+    portfolio["trailing_stop_loss"] = (
+        portfolio[portfolio["signal"] == 1]
+        .groupby((portfolio["signal"] == 1).cumsum())["high"]
+        .transform(lambda x: x.rolling(window=len(x)).max())
+        - portfolio["atr"]
+    )
+    # set the signal to 0 if the trailing stop loss is less than the bid close
+    portfolio["ts_signal"] = portfolio["signal"].copy()
+    portfolio.loc[(portfolio["bid_close"] < portfolio["trailing_stop_loss"]) & (portfolio["trigger"] != 1), "ts_signal"] = 0
+    portfolio["ts_trigger"] = portfolio["ts_signal"].diff()
 
-    # portfolio["current_signal"] = portfolio["trigger"].cumsum()
+    # portfolio["current_signal"] = portfolio["ts_trigger"].cumsum()
     portfolio["buy_signals"] = abs(
-        portfolio["trigger"].where(portfolio["trigger"] == 1, 0)
+        portfolio["ts_trigger"].where(portfolio["ts_trigger"] == 1, 0)
     )
     portfolio["sell_signals"] = abs(
-        portfolio["trigger"].where(portfolio["trigger"] == -1, 0)
+        portfolio["ts_trigger"].where(portfolio["ts_trigger"] == -1, 0)
     )
     portfolio["num_buy_signals"] = portfolio["buy_signals"].cumsum()
     portfolio["num_sell_signals"] = portfolio["sell_signals"].cumsum()
@@ -136,6 +154,8 @@ def report(
             "quote_net_asset",
             "wma",
             "atr",
+            "ha_ask_open",
+            "ha_bid_close",
             "ask_close",
             "bid_open",
         ]
@@ -143,9 +163,9 @@ def report(
     df_ticks.reset_index(inplace=True)
     df_orders = df_ticks[df_ticks["trigger"] != 0]
     print("last 6 trades")
-    print(df_orders.tail(6).to_csv())
+    print(df_orders.tail(6).round(3).to_csv())
     print("current status")
-    print(df_ticks.tail(1).to_csv())
+    print(df_ticks.tail(1).round(3).to_csv())
 
 
 def backtest(filename: str):
@@ -167,7 +187,9 @@ def backtest(filename: str):
         parse_dates=["timestamp"],
     )
 
-    kernel(df)
+    res = kernel(df)
+
+    report(res[0])
 
 
 def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
@@ -189,15 +211,14 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
         A DataFrame containing the trading signals and portfolio calculations.
 
     """
-    # calculate the ATR and multiply it by 1.5 for the trailing stop loss
+    # calculate the ATR and multiply it by .5 for the trailing stop loss
     df["atr"] = (
         talib.ATR(
             df["high"].to_numpy(),
             df["low"].to_numpy(),
             df["close"].to_numpy(),
-            timeperiod=20,
+            timeperiod=WMA_PERIOD,
         )
-        * 1.5
     )
 
     # signal using the ha_ask_open and ha_bid_close prices
@@ -207,7 +228,7 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     # that means that the price to open the trade at would be the open price
     # if we check that the open price is above the wma then we buy
     # the price to close the trade at would be the close price below the wma
-    df = wma_ha(df, "ha_low", 20)
+    df = wma_ha(df, "ha_low", WMA_PERIOD)
     df = generate_signals(df, "ha_ask_open", "ha_bid_close")
 
     # calculate the portfolio:
@@ -250,8 +271,8 @@ def bot(
         startTime = datetime.now()
         try:
             df = getOandaOHLC(ctx, instrument)
-            print(df.head(1).to_csv())
-            print(df.tail(1).to_csv())
+            print(df.head(1).round(3).to_csv())
+            print(df.tail(1).round(3).to_csv())
         except Exception as err:  # noqa: E722
             print(err)
             sleep(5)
@@ -259,21 +280,24 @@ def bot(
 
         res = kernel(df)
         df = res[0]
+        closeout_risk = res[1]
 
         quote_net_asset = df["quote_net_asset"].iloc[-1]
         if quote_net_asset < 0:
             print(
-                "%s losing money %d",
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                quote_net_asset,
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} losing money {quote_net_asset}",
             )
+            report(res[0])
             sleep(300)
             continue
+        if closeout_risk:
+            print(
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} closeout risk {quote_net_asset}"
+            )
 
         trigger = df["trigger"].iloc[-1]
         signal = df["signal"].iloc[-1]
         if trigger != 0:
-
             if trigger == 1 and trade_id == -1:
                 try:
                     if amount is None:
@@ -306,14 +330,14 @@ def bot(
         print(f"runtime: {endTime - startTime}")
         # print the results
         report(res[0])
-        sleep(30)
+        sleep(15)
 
 
 if __name__ == "__main__":
     if "backtest" in sys.argv[1]:
         backtest(sys.argv[2])
     elif "bot":
-        bot(sys.argv[1], sys.argv[2], sys.argv[3], 2500)
+        bot(sys.argv[1], sys.argv[2], sys.argv[3], 2500 // 2)
     else:
         print(sys.argv)
         print("""
