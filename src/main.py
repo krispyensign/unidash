@@ -8,10 +8,17 @@ import numpy as np
 import talib
 import v20  # type: ignore
 
-from exchange import close_order, getOandaOHLC, getOandaBalance, place_order
+from exchange import (
+    close_order,
+    get_open_trades,
+    getOandaOHLC,
+    getOandaBalance,
+    place_order,
+)
 from pipeline import wma_ha
 
 import logging
+
 logger = logging.getLogger("main.py")
 
 Thursday = 4
@@ -78,13 +85,17 @@ def portfolio(
     # set the trailing stop loss
     portfolio["trailing_stop_loss"] = (
         portfolio[portfolio["signal"] == 1]
-        .groupby((portfolio["signal"] == 1).cumsum())["high"]
+        .groupby((portfolio["signal"] == 1).cumsum())["bid_high"]
         .transform(lambda x: x.rolling(window=len(x)).max())
         - portfolio["atr"]
     )
     # set the signal to 0 if the trailing stop loss is less than the bid close
     portfolio["ts_signal"] = portfolio["signal"].copy()
-    portfolio.loc[(portfolio["bid_close"] < portfolio["trailing_stop_loss"]) & (portfolio["trigger"] != 1), "ts_signal"] = 0
+    portfolio.loc[
+        (portfolio["bid_close"] < portfolio["trailing_stop_loss"])
+        & (portfolio["trigger"] != 1),
+        "ts_signal",
+    ] = 0
     portfolio["ts_trigger"] = portfolio["ts_signal"].diff()
 
     # portfolio["current_signal"] = portfolio["ts_trigger"].cumsum()
@@ -221,7 +232,7 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
             df["close"].to_numpy(),
             timeperiod=WMA_PERIOD,
         )
-    )
+    ) * 1.5
 
     # signal using the ha_ask_open and ha_bid_close prices
     # signal and trigger interval could appears as this
@@ -231,7 +242,7 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     # if we check that the open price is above the wma then we buy
     # the price to close the trade at would be the close price below the wma
     df = wma_ha(df, "ha_low", WMA_PERIOD)
-    df = generate_signals(df, "ha_ask_open", "ha_bid_close")
+    df = generate_signals(df, "ha_ask_high", "ha_bid_low")
 
     # calculate the portfolio:
     # When the trigger is 1, use the ask_open price (buy signal)
@@ -294,6 +305,7 @@ def bot(
             report(res[0])
             sleep(300)
             continue
+
         if closeout_risk:
             logger.warning(
                 f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} closeout risk {quote_net_asset}"
@@ -301,31 +313,22 @@ def bot(
 
         trigger = df["trigger"].iloc[-1]
         signal = df["signal"].iloc[-1]
-        if trigger != 0:
-            if trigger == 1 and trade_id == -1:
-                try:
-                    if amount is None:
-                        balance = getOandaBalance(ctx, account_id)
-                        amount = (balance // 2 + 1) * 50
-                    trade_id = place_order(ctx, account_id, instrument, amount)
-                except Exception as err:
-                    logger.error(err)
-                    sleep(5)
-                    continue
-
-            elif trigger == -1 and trade_id != -1:
-                try:
-                    close_order(ctx, account_id, trade_id)
-                    trade_id = -1
-                except Exception as err:
-                    logger.error(err)
-                    sleep(5)
-                    continue
-
-        elif trigger == 0 and signal == 0 and trade_id != -1:
+        if trigger == 1:
             try:
-                close_order(ctx, account_id, trade_id)
-                trade_id = -1
+                if amount is None:
+                    balance = getOandaBalance(ctx, account_id)
+                    amount = (balance // 2 + 1) * 50
+                trade_id = place_order(ctx, account_id, instrument, amount)
+                continue
+            except Exception as err:
+                logger.error(err)
+                sleep(5)
+
+        if trigger != 1 and signal == 0:
+            try:
+                trade_id = get_open_trades(ctx, account_id)
+                if trade_id != -1:
+                    close_order(ctx, account_id, trade_id)
             except Exception as err:
                 logger.error(err)
                 sleep(5)

@@ -51,8 +51,11 @@ Using MS SQL for model prediction
 ## TODO
 
 - [X] automated trading using python
+- [X] logging
+- [X] trailing stop loss
+- [ ] close open trades when signal is 0
 - [ ] integration testing with Oanda sandbox
-- [ ] tune ATR
+- [X] tune ATR
 - [ ] save OHLC and results to ms sql using sqlalchemy
 - [X] remove all unused typescript code
 - [ ] asp.net service to periodically perform tasks

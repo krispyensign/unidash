@@ -186,3 +186,30 @@ def close_order(ctx: v20.Context, account_id: str, trade_id: int) -> None:
     if resp.body is not None:
         if "orderRejectTransaction" in resp.body:
             raise Exception(resp.body["orderRejectTransaction"])
+
+
+def get_open_trades(ctx: v20.Context, account_id: str) -> int:
+    """Get the open trades from the Oanda API.
+
+    Parameters
+    ----------
+    ctx : v20.Context
+        The Oanda API context.
+    account_id : str
+        The account ID associated with the Oanda account.
+
+    Returns
+    -------
+    int
+        The trade ID of the first open trade.
+
+    """
+    resp = ctx.trade.list_open(account_id)
+    trades: list[v20.trade.Trade] = []
+    if resp.body is not None:
+        if "trades" in resp.body:
+            trades = resp.body["trades"]
+            if len(trades) > 0:
+                return trades[0].id
+
+    return -1
