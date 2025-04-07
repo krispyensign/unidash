@@ -10,8 +10,8 @@ __pycache__/
 .lock
 CACHEDIR.TAG
 ChangeLog
-LICENSE.txt
-log.txt
 pyvenv.cfg
 *.csv
 .vscode/
+*.log
+*.txt

@@ -11,6 +11,8 @@ import v20  # type: ignore
 from exchange import close_order, getOandaOHLC, getOandaBalance, place_order
 from pipeline import wma_ha
 
+import logging
+logger = logging.getLogger("main.py")
 
 Thursday = 4
 WMA_PERIOD = 20
@@ -162,10 +164,10 @@ def report(
     ]
     df_ticks.reset_index(inplace=True)
     df_orders = df_ticks[df_ticks["trigger"] != 0]
-    print("last 6 trades")
-    print(df_orders.tail(6).round(3).to_csv())
-    print("current status")
-    print(df_ticks.tail(1).round(3).to_csv())
+    logger.debug("last 6 trades")
+    logger.debug(df_orders.tail(6).round(3).to_csv())
+    logger.info("current status")
+    logger.info(df_ticks.tail(1).round(3).to_csv())
 
 
 def backtest(filename: str):
@@ -264,6 +266,8 @@ def bot(
         on the current balance.
 
     """
+    logging.basicConfig(level=logging.DEBUG, filename="bot.log")
+    logger.info("starting bot")
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     trade_id = -1
     while True:
@@ -271,10 +275,10 @@ def bot(
         startTime = datetime.now()
         try:
             df = getOandaOHLC(ctx, instrument)
-            print(df.head(1).round(3).to_csv())
-            print(df.tail(1).round(3).to_csv())
+            logger.debug(df.head(1).round(3).to_csv())
+            logger.debug(df.tail(1).round(3).to_csv())
         except Exception as err:  # noqa: E722
-            print(err)
+            logger.error(err)
             sleep(5)
             continue
 
@@ -284,14 +288,14 @@ def bot(
 
         quote_net_asset = df["quote_net_asset"].iloc[-1]
         if quote_net_asset < 0:
-            print(
+            logger.error(
                 f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} losing money {quote_net_asset}",
             )
             report(res[0])
             sleep(300)
             continue
         if closeout_risk:
-            print(
+            logger.warning(
                 f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} closeout risk {quote_net_asset}"
             )
 
@@ -305,7 +309,7 @@ def bot(
                         amount = (balance // 2 + 1) * 50
                     trade_id = place_order(ctx, account_id, instrument, amount)
                 except Exception as err:
-                    print(err)
+                    logger.error(err)
                     sleep(5)
                     continue
 
@@ -314,20 +318,21 @@ def bot(
                     close_order(ctx, account_id, trade_id)
                     trade_id = -1
                 except Exception as err:
-                    print(err)
+                    logger.error(err)
                     sleep(5)
                     continue
+
         elif trigger == 0 and signal == 0 and trade_id != -1:
             try:
                 close_order(ctx, account_id, trade_id)
                 trade_id = -1
             except Exception as err:
-                print(err)
-                sleep(30)
+                logger.error(err)
+                sleep(5)
                 continue
 
         endTime = datetime.now()
-        print(f"runtime: {endTime - startTime}")
+        logger.info(f"runtime: {endTime - startTime}")
         # print the results
         report(res[0])
         sleep(15)
