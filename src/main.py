@@ -6,6 +6,7 @@ from time import sleep
 import pandas as pd
 import numpy as np
 import talib
+from chart import heikin_ashi
 import v20  # type: ignore
 
 from exchange import (
@@ -15,7 +16,6 @@ from exchange import (
     getOandaBalance,
     place_order,
 )
-from pipeline import wma_ha
 
 import logging
 
@@ -25,7 +25,7 @@ Thursday = 4
 WMA_PERIOD = 20
 
 
-def generate_signals(
+def wma_signals(
     df: pd.DataFrame, buyColumn: str = "ha_ask_high", sellColumn: str = "ha_bid_low"
 ) -> pd.DataFrame:
     """Generate trading signals based on a comparison of the Heikin-Ashi highs and lows to the wma.
@@ -53,11 +53,11 @@ def generate_signals(
     """
     df["signal"] = 0
 
-    # check if the Heikin-Ashi high is greater than the wma
+    # check if the buy column is greater than the wma
     df.loc[df[buyColumn] > df["wma"], "signal"] = 1
     df["trigger"] = df["signal"].diff()
 
-    # check if the Heikin-Ashi low is less than the wma and the trigger is not 1
+    # check if the sell column is less than the wma and the trigger is not 1
     df.loc[(df[sellColumn] < df["wma"]) & (df["trigger"] != 1), "signal"] = 0
     df["trigger"] = df["signal"].diff()
 
@@ -81,11 +81,10 @@ def apply_trailing_stop_loss(df: pd.DataFrame) -> pd.DataFrame:
 
     """
     # set the trailing stop loss
-    df["trailing_stop_loss"] = (
-        df[df["signal"] == 1]
-        .groupby((df["signal"] == 1).cumsum())["bid_high"]
-        .transform(lambda x: x.rolling(window=len(x)).max())
-        - df["atr"]
+    df["trailing_stop_loss"] = df[df["signal"] == 1].groupby(
+        (df["signal"] == 1).cumsum()
+    )["bid_high"].transform(lambda x: x.rolling(window=len(x)).max()) - (
+        df["atr"] * 0.5
     )
 
     # set the signal to 0 if the trailing stop loss is less than the bid close
@@ -184,18 +183,18 @@ def report(
             "quote_net_asset",
             "wma",
             "atr",
-            "ha_ask_open",
-            "ha_bid_close",
+            # "trailing_stop_loss",
             "ask_close",
             "bid_open",
         ]
     ]
+    df_ticks = df_ticks.assign(trailing_stop_loss=df["bid_close"] - df["atr"])
     df_ticks.reset_index(inplace=True)
     df_orders = df_ticks[df_ticks["trigger"] != 0]
     logger.debug("last 6 trades")
     logger.debug(df_orders.tail(6).round(3).to_csv())
     logger.info("current status")
-    logger.info(df_ticks.tail(1).round(3).to_csv())
+    logger.info(df_ticks.tail(18).round(3).to_csv())
 
 
 def backtest(filename: str):
@@ -244,27 +243,33 @@ def kernel(df: pd.DataFrame) -> tuple[pd.DataFrame, bool, float, float]:
     # calculate the ATR for the trailing stop loss
     df = atr(df)
 
-    # signal using the ha_ask_open and ha_bid_close prices
-    # signal and trigger interval could appears as this
+    # signal using the close prices
+    # signal and trigger interval could appears as this:
     # 0 0 1 1 1 0 0 - 1 above or 0 below the wma
     # 0 0 1 0 0 -1 0 - diff gives actual trigger
+    # offline:
     # that means that the price to open the trade at would be the open price
     # if we check that the open price is above the wma then we buy
     # the price to close the trade at would be the close price below the wma
-    df = wma_ha(df, "ha_low", WMA_PERIOD)
-    df = generate_signals(df, "ha_ask_high", "ha_bid_low")
+    # online:
+    # that means that the price to open the trade at would be the close price
+    # if we check that the close price is above the wma then we buy
+    # the price to close the trade at would be the open price below the wma
+    df = heikin_ashi(df)
+    df["wma"] = talib.WMA(df["bid_low"].to_numpy(), WMA_PERIOD)
+    df = wma_signals(df, "ask_close", "bid_close")
 
     # apply trailing stop loss
     df = apply_trailing_stop_loss(df)
 
     # calculate the portfolio:
-    # When the trigger is 1, use the ask_open price (buy signal)
+    # When the trigger is 1, use the ask_close price (buy signal)
     # When the trigger is -1, it means the buy signal is no longer valid, and the bid_open price
     # at this point would be the same as the bid_close price at the previous point (where the signal
     # was 1)
     # since the closing price is trailing we can use the bid_open in the immediate
     # next row
-    res = portfolio(df, "ask_open", "bid_open")
+    res = portfolio(df, "ask_close", "bid_open")
 
     return res
 
@@ -283,14 +288,12 @@ def atr(df: pd.DataFrame) -> pd.DataFrame:
         A DataFrame containing the ATR and the trailing stop loss.
 
     """
-    df["atr"] = (
-        talib.ATR(
-            df["high"].to_numpy(),
-            df["low"].to_numpy(),
-            df["close"].to_numpy(),
-            timeperiod=WMA_PERIOD,
-        )
-    ) * 1.5
+    df["atr"] = talib.ATR(
+        df["high"].to_numpy(),
+        df["low"].to_numpy(),
+        df["close"].to_numpy(),
+        timeperiod=WMA_PERIOD,
+    )
 
     return df
 
@@ -324,11 +327,13 @@ def bot(  # noqa: C901, PLR0915
         df: pd.DataFrame
         startTime = datetime.now()
         try:
+            trade_id = get_open_trades(ctx, account_id)
             df = getOandaOHLC(ctx, instrument)
             logger.debug(df.head(1).round(3).to_csv())
             logger.debug(df.tail(1).round(3).to_csv())
         except Exception as err:  # noqa: E722
             logger.error(err)
+            trade_id = -1
             sleep(5)
             continue
 
@@ -352,12 +357,13 @@ def bot(  # noqa: C901, PLR0915
 
         trigger = df["trigger"].iloc[-1]
         signal = df["signal"].iloc[-1]
-        if trigger == 1:
+        atr = df["atr"].iloc[-1]
+        if trigger == 1 and trade_id == -1:
             try:
                 if amount is None:
                     balance = getOandaBalance(ctx, account_id)
                     amount = (balance // 2 + 1) * 50
-                trade_id = place_order(ctx, account_id, instrument, amount)
+                trade_id = place_order(ctx, account_id, instrument, amount, atr)
                 continue
             except Exception as err:
                 logger.error(err)
@@ -365,13 +371,9 @@ def bot(  # noqa: C901, PLR0915
 
         if trigger != 1 and signal == 0:
             try:
-                trade_id = get_open_trades(ctx, account_id)
-                if trade_id != -1:
-                    close_order(ctx, account_id, trade_id)
+                close_order(ctx, account_id, trade_id)
             except Exception as err:
                 logger.error(err)
-                sleep(5)
-                continue
 
         endTime = datetime.now()
         logger.info(f"runtime: {endTime - startTime}")

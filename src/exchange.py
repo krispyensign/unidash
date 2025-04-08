@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 import v20  # type: ignore
 import pandas as pd
+import json
 
 Thursday = 4
 
@@ -115,7 +116,7 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
 
 
 def place_order(
-    ctx: v20.Context, account_id: str, instrument: str, amount: float
+    ctx: v20.Context, account_id: str, instrument: str, amount: float, atr: float
 ) -> int:
     """Place an order on the Oanda API.
 
@@ -131,6 +132,8 @@ def place_order(
         The direction of the order, either "buy" or "sell".
     amount : float
         The amount of the instrument to buy or sell.
+    atr : float
+        The average true range of the instrument.
 
     Returns
     -------
@@ -150,19 +153,12 @@ def place_order(
 
     # get the trade id from the response body and return it if it exists
     trade_id: int
-    if resp.body is not None:
-        if "orderFillTransaction" in resp.body:
-            result: v20.transaction.OrderFillTransaction = resp.body[
-                "orderFillTransaction"
-            ]
-            trade: v20.trade.TradeOpen = result.tradeOpened
-            trade_id = trade.tradeID
-        elif "orderCancelTransaction" in resp.body:
-            raise Exception(resp.body["orderCancelTransaction"])
-        elif "orderRejectTransaction" in resp.body:
-            raise Exception(resp.body["orderRejectTransaction"])
+    if resp.body is not None and "orderFillTransaction" in resp.body:
+        result: v20.transaction.OrderFillTransaction = resp.body["orderFillTransaction"]
+        trade: v20.trade.TradeOpen = result.tradeOpened
+        trade_id = trade.tradeID
     else:
-        raise Exception("No response body")
+        raise Exception(json.dumps(resp, indent=2))
 
     return trade_id
 
@@ -184,7 +180,7 @@ def close_order(ctx: v20.Context, account_id: str, trade_id: int) -> None:
 
     if resp.body is not None:
         if "orderRejectTransaction" in resp.body:
-            raise Exception(resp.body["orderRejectTransaction"])
+            raise Exception(json.dumps(resp, indent=2))
 
 
 def get_open_trades(ctx: v20.Context, account_id: str) -> int:
