@@ -194,10 +194,10 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     logger.info("starting backtest")
     start_time = datetime.now()
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
-    count = 40
-    granularity = "M5"
+    count = 60
+    granularity = "M1"
     wma_period = 20
-    take_profit_value = 0
+    take_profit_value = 3
 
     df = getOandaOHLC(ctx, instrument, count=count, granularity=granularity)
     logger.info(
@@ -211,6 +211,10 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     best_max_min_sourceColumnName = ""
     best_df = pd.DataFrame()
     not_worst_df = pd.DataFrame()
+    most_wins = pd.DataFrame()
+    max_most_wins = 0
+    most_wins_signalColumnName = ""
+    most_wins_sourceColumnName = ""
     signalColumnNames = [
         "open",
         "high",
@@ -233,23 +237,23 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     ]
     sourceColumnNames = [
         "open",
-        # "high",
-        # "low",
+        "high",
+        "low",
         "ha_open",
-        # "ha_low",
-        # "ha_high",
+        "ha_low",
+        "ha_high",
         "ha_bid_open",
-        # "ha_bid_low",
-        # "ha_bid_high",
+        "ha_bid_low",
+        "ha_bid_high",
         "ha_ask_open",
-        # "ha_ask_low",
-        # "ha_ask_high",
+        "ha_ask_low",
+        "ha_ask_high",
         "bid_open",
-        # "bid_high",
-        # "bid_low",
+        "bid_high",
+        "bid_low",
         "ask_open",
-        # "ask_high",
-        # "ask_low",
+        "ask_high",
+        "ask_low",
     ]
     total_combinations = len(sourceColumnNames) * len(sourceColumnNames)
     logger.info(f"total_combinations: {total_combinations}")
@@ -264,14 +268,22 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
             )
             df["exit_total"] = df["exit_total"].fillna(0)
 
+            wins = np.where(df["exit_total"] > 0, 1, 0).sum()
+            if wins > max_most_wins:
+                max_most_wins = wins
+                most_wins_signalColumnName = signalColumnName
+                most_wins_sourceColumnName = sourceColumnName
+                most_wins = df.copy()
+
             exit_total = df["exit_total"].iloc[-1]
             min_exit_total = df["exit_total"].min()
             if min_exit_total > max_min_exit_total:
                 logger.info(
-                    "!!new min found q:%s si:%s so:%s",
+                    "!!new min found q:%s si:%s so:%s wins:%s",
                     min_exit_total,
                     signalColumnName,
                     sourceColumnName,
+                    wins,
                 )
                 max_min_exit_total = min_exit_total
                 best_max_min_sourceColumnName = sourceColumnName
@@ -280,10 +292,11 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
 
             if exit_total > max_exit_total:
                 logger.info(
-                    "!!new max found q:%s si:%s so:%s",
+                    "!!new max found q:%s si:%s so:%s wins:%s",
                     exit_total,
                     signalColumnName,
                     sourceColumnName,
+                    wins,
                 )
                 max_exit_total = exit_total
                 best_max_sourceColumnName = sourceColumnName
@@ -291,10 +304,11 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
                 best_df = df.copy()
             elif exit_total > 0:
                 logger.info(
-                    "  found q:%s si:%s so:%s",
+                    "  found q:%s si:%s so:%s wins:%s",
                     exit_total,
                     signalColumnName,
                     sourceColumnName,
+                    wins,
                 )
 
     report(best_df)
@@ -310,6 +324,13 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     logger.info(f"not_worst_signalColumnName: {best_max_min_signalColumnName}")
     logger.info(f"not_worst_sourceColumnName: {best_max_min_sourceColumnName}")
     logger.info(f"max_min_exit_total: {max_min_exit_total}")
+    
+    report (most_wins)
+
+    logger.info("most wins combination")
+    logger.info(f"most_wins_signalColumnName: {most_wins_signalColumnName}")
+    logger.info(f"most_wins_sourceColumnName: {most_wins_sourceColumnName}")
+    logger.info(f"max_most_wins: {max_most_wins}")
 
     endTime = datetime.now()
     logger.info(f"run interval: {endTime - start_time}")
@@ -318,8 +339,8 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
 
 def kernel(
     df: pd.DataFrame,
-    signalColumn: str = "ha_bid_open",
-    sourceColumn: str = "ha_ask_open",
+    signalColumn: str = "ha_low",
+    sourceColumn: str = "bid_open",
     wma_period: int = 20,
     take_profit_value: float = 0,
 ) -> pd.DataFrame:
