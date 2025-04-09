@@ -1,6 +1,5 @@
 """Get OHLC data from an exchange and convert it into a pandas DataFrame."""
 
-from datetime import datetime, timedelta
 import v20  # type: ignore
 import pandas as pd
 import json
@@ -32,7 +31,9 @@ def getOandaBalance(ctx: v20.Context, account_id: str) -> float:
     return 0
 
 
-def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
+def getOandaOHLC(
+    ctx: v20.Context, instrment: str, granularity: str = "M5", count: int = 288
+) -> pd.DataFrame:
     # create dataframe with candles
     """Get OHLC data from Oanda and convert it into a pandas DataFrame.
 
@@ -42,6 +43,10 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
         The Oanda API context.
     instrment : str
         The instrument to get the OHLC data for.
+    granularity : str, optional
+        The granularity of the OHLC data, by default "M5".
+    count : int, optional
+        The number of candles to get, by default 288.
 
     Returns
     -------
@@ -82,19 +87,16 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
         ]
     )
 
-    daydelta = 1
-    weekday = datetime.now().weekday()
-    if weekday > Thursday:
-        daydelta = weekday - 3
-
     resp = ctx.instrument.candles(
         instrument=instrment,
-        granularity="M5",
-        fromTime=(datetime.now() - timedelta(days=daydelta)).timestamp(),
+        granularity=granularity,
+        # fromTime=(datetime.now() - timedelta(days=daydelta)).timestamp(),
         price="MAB",
+        count=count,
     )
     if resp.body["candles"]:
         candles: v20.instrument.Candlesticks = resp.body["candles"]
+        candle: v20.instrument.Candlestick
         for i, candle in enumerate(candles):
             df.loc[i] = {  # type: ignore
                 "timestamp": candle.time,
@@ -116,7 +118,11 @@ def getOandaOHLC(ctx: v20.Context, instrment: str) -> pd.DataFrame:
 
 
 def place_order(
-    ctx: v20.Context, account_id: str, instrument: str, amount: float, atr: float
+    ctx: v20.Context,
+    account_id: str,
+    instrument: str,
+    amount: float,
+    take_profit: float,
 ) -> int:
     """Place an order on the Oanda API.
 
@@ -132,8 +138,8 @@ def place_order(
         The direction of the order, either "buy" or "sell".
     amount : float
         The amount of the instrument to buy or sell.
-    atr : float
-        The average true range of the instrument.
+    take_profit : float
+        The take profit price for the order.
 
     Returns
     -------
@@ -145,6 +151,7 @@ def place_order(
     order: v20.order.MarketOrder = v20.order.MarketOrder(
         instrument=instrument,
         units=amount,
+        # takeProfitOnFill=v20.transaction.TakeProfitDetails(price=take_profit),
     )
     resp = ctx.order.create(
         account_id,

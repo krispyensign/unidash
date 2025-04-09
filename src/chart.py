@@ -4,7 +4,7 @@ import typing
 import pandas as pd
 
 
-def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
+def heikin_ashi(df: pd.DataFrame) -> None:
     """Generate Heikin Ashi candlesticks for a given dataframe.
 
     Heikin Ashi is a Japanese chart type that is used to identify trends and
@@ -64,8 +64,6 @@ def heikin_ashi(df: pd.DataFrame) -> pd.DataFrame:
     df["ha_ask_low"] = df[["ask_low", "ha_ask_open", "ha_ask_close"]].min(axis=1)
 
     df.set_index("timestamp", inplace=True)
-
-    return df
 
 
 def ohlc(
