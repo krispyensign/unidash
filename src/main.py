@@ -19,6 +19,7 @@ import logging
 logger = logging.getLogger("main.py")
 
 THURSDAY = 4
+BACKTEST_INTERVAL = 1800
 
 GRANULARITY = "M1"
 WMA_PERIOD = 20
@@ -27,12 +28,9 @@ BACKTEST_COUNT = 120
 OPTOMISTIC = True
 REFRESH_RATE = 1 if OPTOMISTIC else 10
 BOT_COUNT = BACKTEST_COUNT
-BOT_SOURCE_COLUMN = "ask_open"
-BOT_SIGNAL_BUY_COLUMN = "bid_high"
-BOT_SIGNAL_EXIT_COLUMN = "bid_low"
 
 
-def backtest(instrument: str, token: str):  # noqa: PLR0915
+def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0915
     """Run a backtest of the trading strategy.
 
     Parameters
@@ -49,7 +47,6 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     printed to the log file.
 
     """
-    logging.basicConfig(level=logging.DEBUG, filename="backtest.log")
     logger.info("starting backtest")
     start_time = datetime.now()
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
@@ -174,6 +171,23 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     logger.info(f"run interval: {endTime - start_time}")
     logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
 
+    # choose the least worst combination to minimize loss
+    if (
+        max_min_exit_total > best_df["exit_total"].min()
+        and not_worst_df["exit_total"].iloc[-1] > 0
+    ):
+        return (
+            best_min_max_source_column_name,
+            best_min_max_signal_buy_column_name,
+            best_min_max_signal_exit_column_name,
+        )
+
+    return (
+        best_max_source_column_name,
+        best_max_signal_buy_column_name,
+        best_max_signal_exit_column_name,
+    )
+
 
 def bot(  # noqa: C901, PLR0915
     token: str, account_id: str, instrument: str, amount: float
@@ -196,9 +210,16 @@ def bot(  # noqa: C901, PLR0915
         on the current balance.
 
     """
-    logging.basicConfig(level=logging.DEBUG, filename="bot.log")
-    logger.info("starting bot")
     start_time = datetime.now()
+    columns = backtest(
+        instrument=instrument,
+        token=token,
+    )
+    source_column = columns[0]
+    signal_buy_column = columns[1]
+    signal_exit_column = columns[2]
+    last_backtest_time = datetime.now()
+    logger.info("starting bot")
     logger.info("time now: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     trade_id = -1
@@ -221,9 +242,9 @@ def bot(  # noqa: C901, PLR0915
             take_profit_value=TAKE_PROFIT_VALUE,
             wma_period=WMA_PERIOD,
             optimistic=OPTOMISTIC,
-            signal_buy_column=BOT_SIGNAL_BUY_COLUMN,
-            signal_exit_column=BOT_SIGNAL_EXIT_COLUMN,
-            source_column=BOT_SOURCE_COLUMN,
+            signal_buy_column=signal_buy_column,
+            signal_exit_column=signal_exit_column,
+            source_column=source_column,
         )
 
         trigger = df["trigger"].iloc[-1]
@@ -249,13 +270,26 @@ def bot(  # noqa: C901, PLR0915
         logger.info(f"run interval: {endTime - startTime}")
         logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
+        # if it's been over 30 minutes since last back test
+        if (endTime - last_backtest_time).total_seconds() > BACKTEST_INTERVAL:
+            columns = backtest(
+                instrument=instrument,
+                token=token,
+            )
+            source_column = columns[0]
+            signal_buy_column = columns[1]
+            signal_exit_column = columns[2]
+            last_backtest_time = datetime.now()
+
         sleep(REFRESH_RATE)
 
 
 if __name__ == "__main__":
     if "backtest" in sys.argv[1]:
+        logging.basicConfig(level=logging.DEBUG, filename="backtest.log")
         backtest(instrument=sys.argv[3], token=sys.argv[2])
     elif "bot" in sys.argv[1]:
+        logging.basicConfig(level=logging.DEBUG, filename="bot.log")
         bot(sys.argv[2], sys.argv[3], sys.argv[4], 1000)
     else:
         print(sys.argv)
