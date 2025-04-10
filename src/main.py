@@ -54,7 +54,9 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
     start_time = datetime.now()
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
 
-    df = getOandaOHLC(ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY)
+    orig_df = getOandaOHLC(
+        ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY
+    )
     logger.info(
         "count: %s granularity: %s wma_period: %s",
         BACKTEST_COUNT,
@@ -115,7 +117,7 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
         for signal_buy_column_name in signal_buy_columns:
             for signal_exit_column_name in signal_exit_columns:
                 df = kernel(
-                    df,
+                    orig_df.copy(),
                     source_column=source_column_name,
                     signal_buy_column=signal_buy_column_name,
                     signal_exit_column=signal_exit_column_name,

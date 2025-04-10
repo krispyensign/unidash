@@ -108,7 +108,7 @@ def kernel(  # noqa: PLR0913
 
     """
     # calculate the ATR for the trailing stop loss
-    df = atr(df, wma_period)
+    atr(df, wma_period)
 
     # signal using the close prices
     # signal and trigger interval could appears as this:
@@ -131,17 +131,7 @@ def kernel(  # noqa: PLR0913
         source_column=source_column,
     )
 
-    # apply trailing stop loss
-    # df = apply_trailing_stop_loss(df)
-
-    # calculate the portfolio:
-    # When the trigger is 1, use the ask_open price (buy signal)
-    # When the trigger is -1, it means the buy signal is no longer valid, and the bid_open price
-    # at this point would be the same as the bid_close price at the previous point (where the signal
-    # was 1)
-    # since the closing price is trailing we can use the bid_open in the immediate
-    # next row
-    # res = portfolio(df, "ask_high", "bid_open")
+    # calculate the entry prices:
     entry_price(df, optimistic)
 
     # recalculate the entry prices after a take profit
@@ -152,8 +142,6 @@ def kernel(  # noqa: PLR0913
     exit_total(df)
 
     return df
-
-
 
 
 def report(

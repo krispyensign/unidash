@@ -60,6 +60,11 @@ def take_profit(df: pd.DataFrame, take_profit: float, optimistic: bool) -> None:
 def entry_price(df: pd.DataFrame, optimistic: bool) -> None:
     """Calculate the entry price for a given trading signal.
 
+    When the trigger is 1, use the ask_open price (buy signal), so when the trigger is -1, it means
+    the buy signal is no longer valid, and the bid_open price at this point would be the same as
+    the bid_close price at the previous point (where the signal was 1) since the closing price is
+    trailing we can use the bid_open in the immediate next row.
+
     Parameters
     ----------
     df : pd.DataFrame
