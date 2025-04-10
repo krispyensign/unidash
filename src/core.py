@@ -47,7 +47,10 @@ def wma_signals(
     df["wma"] = talib.WMA(df[source_column].to_numpy(), wma_period)
 
     # check if the buy column is greater than the wma
-    df.loc[(df[signal_buy_column] > df["wma"]) | (df[signal_exit_column] < df["wma"]), "signal"] = 1
+    df.loc[
+        (df[signal_buy_column] > df["wma"]) | (df[signal_exit_column] < df["wma"]),
+        "signal",
+    ] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
@@ -107,7 +110,11 @@ def kernel(  # noqa: PLR0913
     # the price to close the trade at would be the open price below the wma
     heikin_ashi(df)
     wma_signals(
-        df, signal_exit_column=signal_exit_column, signal_buy_column=signal_buy_column, wma_period=wma_period, source_column=source_column
+        df,
+        signal_exit_column=signal_exit_column,
+        signal_buy_column=signal_buy_column,
+        wma_period=wma_period,
+        source_column=source_column,
     )
 
     # apply trailing stop loss

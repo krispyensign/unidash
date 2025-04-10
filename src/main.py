@@ -108,7 +108,9 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
         "ha_ask_open",
         "ha_ask_low",
     ]
-    total_combinations = len(source_columns) * len(signal_buy_columns) * len(signal_exit_columns)
+    total_combinations = (
+        len(source_columns) * len(signal_buy_columns) * len(signal_exit_columns)
+    )
     logger.info(f"total_combinations: {total_combinations}")
     for source_column_name in source_columns:
         for signal_buy_column_name in signal_buy_columns:
@@ -230,7 +232,7 @@ def bot(  # noqa: C901, PLR0915
             optimistic=OPTOMISTIC,
             signal_buy_column=BOT_SIGNAL_BUY_COLUMN,
             signal_exit_column=BOT_SIGNAL_EXIT_COLUMN,
-            source_column=BOT_SOURCE_COLUMN
+            source_column=BOT_SOURCE_COLUMN,
         )
 
         trigger = df["trigger"].iloc[-1]
