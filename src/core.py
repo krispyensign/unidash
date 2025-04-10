@@ -51,7 +51,7 @@ def wma_signals(
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
-def kernel(
+def kernel(  # noqa: PLR0913
     df: pd.DataFrame,
     signal_buy_column: str = "ha_low",
     signal_exit_column: str = "ha_high",
