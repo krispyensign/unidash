@@ -1,5 +1,6 @@
 import pandas as pd  # noqa: D100
 import numpy as np
+import talib
 
 
 def exit_total(df: pd.DataFrame) -> None:
@@ -86,3 +87,32 @@ def entry_price(df: pd.DataFrame, optimistic: bool) -> None:
     df["position_value"] = (df["bid_open"] - df["entry_price"]) * df[
         "internal_bit_mask"
     ]
+
+
+def atr(df: pd.DataFrame, wma_period: int) -> None:
+    """Calculate the Average True Range for a given DataFrame and add it to the DataFrame.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the trading data.
+    wma_period : int
+        The period for the weighted moving average.
+
+    Returns
+    -------
+    pd.Dataframe
+        The DataFrame with the 'atr' column added.
+
+    Notes
+    -----
+    The 'atr' column is the Average True Range of the trading data, calculated using
+    the TA-Lib library.
+
+    """
+    df["atr"] = talib.ATR(
+        df["high"].to_numpy(),
+        df["low"].to_numpy(),
+        df["close"].to_numpy(),
+        timeperiod=wma_period,
+    )

@@ -1,6 +1,6 @@
 import logging  # noqa: D100
 import talib
-from calc import entry_price, exit_total, take_profit
+from calc import entry_price, exit_total, take_profit, atr
 from chart import heikin_ashi
 import pandas as pd
 
@@ -53,7 +53,8 @@ def wma_signals(
     # F      T      Exit
     # F      F      X
 
-    # TODO: Still doesn't work completely right
+    # TODO: Still doesn't work completely right. Do not completely delete.
+    # Rename function and create a working one with tests.
 
     # check if the buy column is greater than the wma
     df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
@@ -153,30 +154,6 @@ def kernel(  # noqa: PLR0913
     return df
 
 
-def atr(df: pd.DataFrame, wma_period: int) -> pd.DataFrame:
-    """Calculate the ATR and multiply it by .5 for the trailing stop loss.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        A DataFrame containing trading data.
-    wma_period : int
-        The period for the weighted moving average.
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing the ATR and the trailing stop loss.
-
-    """
-    df["atr"] = talib.ATR(
-        df["high"].to_numpy(),
-        df["low"].to_numpy(),
-        df["close"].to_numpy(),
-        timeperiod=wma_period,
-    )
-
-    return df
 
 
 def report(
