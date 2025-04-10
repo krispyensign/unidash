@@ -90,7 +90,6 @@ def getOandaOHLC(
     resp = ctx.instrument.candles(
         instrument=instrment,
         granularity=granularity,
-        # fromTime=(datetime.now() - timedelta(days=daydelta)).timestamp(),
         price="MAB",
         count=count,
     )
@@ -122,7 +121,6 @@ def place_order(
     account_id: str,
     instrument: str,
     amount: float,
-    take_profit: float,
 ) -> int:
     """Place an order on the Oanda API.
 

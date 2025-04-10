@@ -11,7 +11,6 @@ from exchange import (
     close_order,
     get_open_trades,
     getOandaOHLC,
-    getOandaBalance,
     place_order,
 )
 
@@ -23,14 +22,14 @@ THURSDAY = 4
 
 GRANULARITY = "M1"
 WMA_PERIOD = 20
-TAKE_PROFIT_VALUE = 3
-BACKTEST_COUNT = 60
+TAKE_PROFIT_VALUE = 1
+BACKTEST_COUNT = 120
 OPTOMISTIC = True
 REFRESH_RATE = 1 if OPTOMISTIC else 10
-BOT_COUNT = 288
+BOT_COUNT = BACKTEST_COUNT
 BOT_SOURCE_COLUMN = "ask_open"
-BOT_SIGNAL_BUY_COLUMN = "bid_open"
-BOT_SIGNAL_EXIT_COLUMN = "ask_open"
+BOT_SIGNAL_BUY_COLUMN = "bid_high"
+BOT_SIGNAL_EXIT_COLUMN = "bid_low"
 
 
 def backtest(instrument: str, token: str):  # noqa: PLR0915
@@ -154,30 +153,20 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
                     best_max_signal_exit_column_name = signal_exit_column_name
                     best_max_source_column_name = source_column_name
                     best_df = df.copy()
-                # elif exit_total > 0:
-                #     logger.info(
-                #         " found q:%s sib:%s sie:%s so:%s",
-                #         exit_total,
-                #         signal_buy_column_name,
-                #         signal_exit_column_name,
-                #         source_column_name,
-                #     )
 
-    report(best_df)
-
-    logger.info("best combination")
+    logger.info("==best combination")
     logger.info(f"best source {best_max_source_column_name}")
     logger.info(f"best buy {best_max_signal_buy_column_name}")
     logger.info(f"best exit {best_max_signal_exit_column_name}")
-    logger.info(f"max_exit_total: {max_exit_total}")
+    logger.info(f"final_exit_total: {max_exit_total}")
+    logger.info(f"min_exit_total: {best_df['exit_total'].min()}")
 
-    report(not_worst_df)
-
-    logger.info("not worst combination")
+    logger.info("==not worst combination")
     logger.info(f"best min source {best_min_max_source_column_name}")
     logger.info(f"best min buy {best_min_max_signal_buy_column_name}")
     logger.info(f"best min exit {best_min_max_signal_exit_column_name}")
-    logger.info(f"max_min_exit_total: {max_min_exit_total}")
+    logger.info(f"final_exit_total: {not_worst_df['exit_total'].iloc[-1]}")
+    logger.info(f"min_exit_total: {max_min_exit_total}")
 
     endTime = datetime.now()
     logger.info(f"run interval: {endTime - start_time}")
@@ -185,7 +174,7 @@ def backtest(instrument: str, token: str):  # noqa: PLR0915
 
 
 def bot(  # noqa: C901, PLR0915
-    token: str, account_id: str, instrument: str, amount: float | None = None
+    token: str, account_id: str, instrument: str, amount: float
 ) -> None:
     """Bot that trades on Oanda.
 
@@ -237,14 +226,9 @@ def bot(  # noqa: C901, PLR0915
 
         trigger = df["trigger"].iloc[-1]
         signal = df["signal"].iloc[-1]
-        atr = df["atr"].iloc[-1]
-        take_profit = atr + df["ask_open"].iloc[-1]
         if trigger == 1 and trade_id == -1:
             try:
-                if amount is None:
-                    balance = getOandaBalance(ctx, account_id)
-                    amount = (balance // 2 + 1) * 50
-                trade_id = place_order(ctx, account_id, instrument, amount, take_profit)
+                trade_id = place_order(ctx, account_id, instrument, amount)
                 continue
             except Exception as err:
                 trade_id = -1
@@ -263,7 +247,7 @@ def bot(  # noqa: C901, PLR0915
         logger.info(f"run interval: {endTime - startTime}")
         logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
-        sleep(5)
+        sleep(REFRESH_RATE)
 
 
 if __name__ == "__main__":

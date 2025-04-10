@@ -1,6 +1,6 @@
 # Unidash
 
-Perform signal generation and backtesting using WMA and Heiken Ashi.
+Oanda bot to perform signal generation and backtesting using WMA on different charts.
 
 ## WARNING
 
@@ -38,11 +38,6 @@ main.py bot $YOUR_OANDA_TOKEN $YOUR_OANDA_ACCOUNT_ID USD_JPY
 main.py backtest some_file.csv
 ```
 
-## Results
-
-Currently it does appear it could result in a profit as described in the article
-[Best Indicators For Day Trading](https://www.liberatedstocktrader.com/best-indicators-for-day-trading/#wma)
-
 ## Future Work
 
 Save OHLC data and various backtest scenarios to MS SQL
@@ -54,11 +49,13 @@ Using MS SQL for model prediction
 - [X] logging
 - [X] trailing stop loss
 - [X] close open trades when signal is 0
+- [ ] fix weird wma signalling
+- [ ] dashboard to view current charts
 - [ ] integration testing with Oanda sandbox
 - [X] tune ATR
 - [ ] save OHLC and results to ms sql using sqlalchemy
 - [X] remove all unused typescript code
 - [ ] asp.net service to periodically perform tasks
-- [ ] embed python wma-ha pipeline(s) in ms sql
+- [ ] embed python kernel pipeline(s) in ms sql
 - [ ] perform backtests using ms sql
 - [ ] mine data using ms sql predictive capabilities

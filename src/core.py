@@ -47,11 +47,24 @@ def wma_signals(
     df["wma"] = talib.WMA(df[source_column].to_numpy(), wma_period)
 
     # check if the buy column is greater than the wma
-    df.loc[
-        (df[signal_buy_column] > df["wma"]) | (df[signal_exit_column] < df["wma"]),
-        "signal",
-    ] = 1
+    # B > W  S < W  Result
+    # T      T      X
+    # T      F      Buy
+    # F      T      Exit
+    # F      F      X
+
+    # TODO: Still doesn't work completely right
+
+    # check if the buy column is greater than the wma
+    df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
+
+    if signal_buy_column != signal_exit_column:
+        # check if the exit column is less than the wma and the trigger is not 1
+        df.loc[
+            (df[signal_exit_column] < df["wma"]) & (df["trigger"] != 1), "signal"
+        ] = 0
+        df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
 def kernel(  # noqa: PLR0913
@@ -68,7 +81,7 @@ def kernel(  # noqa: PLR0913
     This function processes a DataFrame containing trading data and generate trading signals
     using Heikin-Ashi candlesticks and weighted moving average (wma).
 
-    TODO: support pipelines other than wma_ha
+    TODO: support other pipelines
 
     Parameters
     ----------
@@ -182,8 +195,10 @@ def report(
             "signal",
             "trigger",
             "atr",
+            "wma",
+            "open",
             "entry_price",
-            "ask_high",
+            "ask_open",
             "bid_open",
             "position_value",
             "exit_value",
