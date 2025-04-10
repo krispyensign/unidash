@@ -271,7 +271,10 @@ def bot(  # noqa: C901, PLR0915
         logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
         # if it's been over 30 minutes since last back test
-        if (endTime - last_backtest_time).total_seconds() > BACKTEST_INTERVAL:
+        if (
+            trade_id == -1
+            and (endTime - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
+        ):
             columns = backtest(
                 instrument=instrument,
                 token=token,
