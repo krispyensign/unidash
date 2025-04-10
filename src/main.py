@@ -267,6 +267,7 @@ def bot(  # noqa: C901, PLR0915
         endTime = datetime.now()
         # print the results
         report(df)
+        logger.info(f"columns used: {source_column}, {signal_buy_column}, {signal_exit_column}")
         logger.info(f"run interval: {endTime - startTime}")
         logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
