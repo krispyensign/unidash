@@ -3,6 +3,7 @@
 from datetime import datetime
 import sys
 from time import sleep
+from typing import Any
 import pandas as pd
 import v20  # type: ignore
 
@@ -23,7 +24,7 @@ BACKTEST_INTERVAL = 1800
 
 GRANULARITY = "M1"
 WMA_PERIOD = 20
-TAKE_PROFIT_VALUE = 1
+TAKE_PROFIT_MULTIPLIER = 1
 BACKTEST_COUNT = 120
 OPTOMISTIC = True
 REFRESH_RATE = 1 if OPTOMISTIC else 10
@@ -113,13 +114,14 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
     for source_column_name in source_columns:
         for signal_buy_column_name in signal_buy_columns:
             for signal_exit_column_name in signal_exit_columns:
-                df = kernel(
-                    orig_df.copy(),
+                df = orig_df.copy()
+                kernel(
+                    df,
                     source_column=source_column_name,
                     signal_buy_column=signal_buy_column_name,
                     signal_exit_column=signal_exit_column_name,
                     wma_period=WMA_PERIOD,
-                    take_profit_value=TAKE_PROFIT_VALUE,
+                    # take_profit_value=0,
                     optimistic=OPTOMISTIC,
                 )
 
@@ -210,6 +212,7 @@ def bot(  # noqa: C901, PLR0915
         on the current balance.
 
     """
+    df: pd.DataFrame
     start_time = datetime.now()
     columns = backtest(
         instrument=instrument,
@@ -223,8 +226,8 @@ def bot(  # noqa: C901, PLR0915
     logger.info("time now: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     trade_id = -1
+    last_index: Any | None = None
     while True:
-        df: pd.DataFrame
         startTime = datetime.now()
         try:
             trade_id = get_open_trades(ctx, account_id)
@@ -237,9 +240,11 @@ def bot(  # noqa: C901, PLR0915
             sleep(5)
             continue
 
-        df = kernel(
+        first_time_frame_run = last_index is None or last_index != df.last_valid_index()
+
+        notify_abort = kernel(
             df,
-            take_profit_value=TAKE_PROFIT_VALUE,
+            first_time_frame_run=first_time_frame_run,
             wma_period=WMA_PERIOD,
             optimistic=OPTOMISTIC,
             signal_buy_column=signal_buy_column,
@@ -247,11 +252,31 @@ def bot(  # noqa: C901, PLR0915
             source_column=source_column,
         )
 
+        if trade_id != -1 and notify_abort:
+            try:
+                logger.warning("abort. closing trade")
+                close_order(ctx, account_id, trade_id)
+            except Exception as err:
+                logger.error(err)
+                trade_id = -1
+                sleep(5)
+                continue
+
         trigger = df["trigger"].iloc[-1]
         signal = df["signal"].iloc[-1]
+        take_profit = (
+            df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
+        )
         if trigger == 1 and trade_id == -1:
             try:
-                trade_id = place_order(ctx, account_id, instrument, amount)
+                trade_id = place_order(
+                    ctx,
+                    account_id,
+                    instrument,
+                    amount,
+                    take_profit=take_profit,
+                    stop_loss=df["atr"].iloc[-1],
+                )
                 continue
             except Exception as err:
                 trade_id = -1
@@ -265,9 +290,12 @@ def bot(  # noqa: C901, PLR0915
                 logger.error(err)
 
         endTime = datetime.now()
+        last_index = df.last_valid_index()
         # print the results
         report(df)
-        logger.info(f"columns used: {source_column}, {signal_buy_column}, {signal_exit_column}")
+        logger.info(
+            f"columns used: {source_column}, {signal_buy_column}, {signal_exit_column}"
+        )
         logger.info(f"run interval: {endTime - startTime}")
         logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))

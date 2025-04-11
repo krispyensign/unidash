@@ -116,11 +116,13 @@ def getOandaOHLC(
     return df
 
 
-def place_order(
+def place_order(  # noqa: PLR0913
     ctx: v20.Context,
     account_id: str,
     instrument: str,
     amount: float,
+    take_profit: float,
+    stop_loss: float,
 ) -> int:
     """Place an order on the Oanda API.
 
@@ -138,6 +140,8 @@ def place_order(
         The amount of the instrument to buy or sell.
     take_profit : float
         The take profit price for the order.
+    stop_loss : float
+        The stop loss price for the order.
 
     Returns
     -------
@@ -149,7 +153,10 @@ def place_order(
     order: v20.order.MarketOrder = v20.order.MarketOrder(
         instrument=instrument,
         units=amount,
-        # takeProfitOnFill=v20.transaction.TakeProfitDetails(price=take_profit),
+        takeProfitOnFill=v20.transaction.TakeProfitDetails(price=f"{take_profit}"),
+        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
+            distance=f"{round(stop_loss,2)}"
+        ),
     )
     resp = ctx.order.create(
         account_id,
@@ -163,7 +170,7 @@ def place_order(
         trade: v20.trade.TradeOpen = result.tradeOpened
         trade_id = trade.tradeID
     else:
-        raise Exception(json.dumps(resp, indent=2))
+        raise Exception(json.dumps(resp.body, indent=2))
 
     return trade_id
 
