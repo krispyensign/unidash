@@ -4,7 +4,7 @@ import v20  # type: ignore
 import pandas as pd
 import logging
 
-logger = logging.getLogger("exchange.py")
+logger = logging.getLogger("exchange")
 
 
 def getOandaBalance(ctx: v20.Context, account_id: str) -> float:
@@ -112,6 +112,7 @@ def getOandaOHLC(
                 "ask_low": candle.ask.l,
                 "ask_close": candle.ask.c,
             }
+        logger.info("retrieved %s candles", len(candles))
 
     return df
 

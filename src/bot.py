@@ -23,7 +23,7 @@ from exchange import (
     place_order,
 )
 
-logger = logging.getLogger("main.py")
+logger = logging.getLogger("bot")
 
 
 def bot(  # noqa: C901, PLR0915

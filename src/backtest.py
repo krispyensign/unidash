@@ -10,7 +10,7 @@ from exchange import (
 
 import logging
 
-logger = logging.getLogger("backtest.py")
+logger = logging.getLogger("backtest")
 
 
 def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0915
@@ -117,7 +117,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                 if min_exit_total > max_min_exit_total:
                     logger.debug(
                         "new min found q:%s so:%s sib:%s sie:%s ",
-                        min_exit_total,
+                        round(min_exit_total, 5),
                         source_column_name,
                         signal_buy_column_name,
                         signal_exit_column_name,
@@ -131,7 +131,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                 if exit_total > max_exit_total:
                     logger.debug(
                         "new max found q:%s so:%s sib:%s sie:%s",
-                        exit_total,
+                        round(exit_total, 5),
                         source_column_name,
                         signal_buy_column_name,
                         signal_exit_column_name,
@@ -151,8 +151,8 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
         best_max_signal_exit_column_name,
         df_wins,
         df_losses,
-        max_exit_total,
-        best_df["exit_total"].min(),
+        round(max_exit_total, 5),
+        round(best_df["exit_total"].min(), 5),
     )
 
     df_wins = len(
@@ -168,8 +168,8 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
         best_min_max_signal_exit_column_name,
         df_wins,
         df_losses,
-        not_worst_df["exit_total"].iloc[-1],
-        not_worst_df["exit_total"].min(),
+        round(not_worst_df["exit_total"].iloc[-1], 5),
+        round(not_worst_df["exit_total"].min(), 5),
     )
 
     endTime = datetime.now()
