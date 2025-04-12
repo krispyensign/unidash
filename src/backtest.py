@@ -12,6 +12,7 @@ import logging
 
 logger = logging.getLogger("backtest.py")
 
+
 def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0915
     """Run a backtest of the trading strategy.
 

@@ -7,7 +7,15 @@ import pandas as pd
 import v20  # type: ignore
 
 from backtest import backtest
-from constants import BACKTEST_COUNT, BACKTEST_INTERVAL, GRANULARITY, OPTIMISTIC, REFRESH_RATE, TAKE_PROFIT_MULTIPLIER, WMA_PERIOD
+from constants import (
+    BACKTEST_COUNT,
+    BACKTEST_INTERVAL,
+    GRANULARITY,
+    OPTIMISTIC,
+    REFRESH_RATE,
+    TAKE_PROFIT_MULTIPLIER,
+    WMA_PERIOD,
+)
 from core import kernel
 from reporting import report
 from exchange import (
