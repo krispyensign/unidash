@@ -116,7 +116,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                 min_exit_total = df["exit_total"].min()
                 if min_exit_total > max_min_exit_total:
                     logger.debug(
-                        "!!new min found q:%s so:%s sib:%s sie:%s ",
+                        "new min found q:%s so:%s sib:%s sie:%s ",
                         min_exit_total,
                         source_column_name,
                         signal_buy_column_name,
@@ -130,7 +130,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
 
                 if exit_total > max_exit_total:
                     logger.debug(
-                        "!!new max found q:%s so:%s sib:%s sie:%s",
+                        "new max found q:%s so:%s sib:%s sie:%s",
                         exit_total,
                         source_column_name,
                         signal_buy_column_name,
