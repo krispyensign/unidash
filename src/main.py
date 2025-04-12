@@ -13,10 +13,7 @@ if __name__ == "__main__":
         logging.basicConfig(
             level=logging.DEBUG,
             format="%(asctime)s [%(levelname)s] %(message)s",
-            handlers=[
-                logging.FileHandler("backtest.log"),
-                logging.StreamHandler()
-            ]
+            handlers=[logging.FileHandler("backtest.log"), logging.StreamHandler()],
         )
         logger = logging.getLogger("main.py")
         result = backtest(instrument=sys.argv[3], token=sys.argv[2])
@@ -25,10 +22,7 @@ if __name__ == "__main__":
         logging.basicConfig(
             level=logging.DEBUG,
             format="%(asctime)s [%(levelname)s] %(message)s",
-            handlers=[
-                logging.FileHandler("bot.log"),
-                logging.StreamHandler()
-            ]
+            handlers=[logging.FileHandler("bot.log"), logging.StreamHandler()],
         )
         bot(sys.argv[2], sys.argv[3], sys.argv[4], 1000)
     else:
