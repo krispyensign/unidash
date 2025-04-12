@@ -3,11 +3,11 @@
 from datetime import datetime
 import sys
 from time import sleep
-from typing import Any
 import pandas as pd
 import v20  # type: ignore
 
-from core import kernel, report
+from core import kernel
+from reporting import report
 from exchange import (
     close_order,
     get_open_trades,
@@ -20,15 +20,14 @@ import logging
 logger = logging.getLogger("main.py")
 
 THURSDAY = 4
-BACKTEST_INTERVAL = 1800
+BACKTEST_INTERVAL = 288 * 5
 
-GRANULARITY = "M1"
+GRANULARITY = "M5"
 WMA_PERIOD = 20
-TAKE_PROFIT_MULTIPLIER = 1
-BACKTEST_COUNT = 120
-OPTOMISTIC = True
-REFRESH_RATE = 1 if OPTOMISTIC else 10
-BOT_COUNT = BACKTEST_COUNT
+TAKE_PROFIT_MULTIPLIER = 2
+BACKTEST_COUNT = 288 * 3
+OPTIMISTIC = True
+# REFRESH_RATE = 1
 
 
 def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0915
@@ -121,9 +120,24 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                     signal_buy_column=signal_buy_column_name,
                     signal_exit_column=signal_exit_column_name,
                     wma_period=WMA_PERIOD,
+                    first_time_frame_run=False,
                     # take_profit_value=0,
-                    optimistic=OPTOMISTIC,
+                    optimistic=OPTIMISTIC,
                 )
+
+                df_wins = len(df[(df["exit_total"] > 0) & (df["trigger"] == -1)])
+                df_losses = len(df[(df["exit_total"] < 0) & (df["trigger"] == -1)])
+                if df_wins <= df_losses:
+                    # logger.debug(
+                    #     "skipping q:%s sib:%s sie:%s so:%s wins:%s losses:%s",
+                    #     df["exit_total"].iloc[-1],
+                    #     signal_buy_column_name,
+                    #     signal_exit_column_name,
+                    #     source_column_name,
+                    #     df_wins,
+                    #     df_losses,
+                    # )
+                    continue
 
                 exit_total = df["exit_total"].iloc[-1]
                 min_exit_total = df["exit_total"].min()
@@ -159,6 +173,9 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
     logger.info(f"best source {best_max_source_column_name}")
     logger.info(f"best buy {best_max_signal_buy_column_name}")
     logger.info(f"best exit {best_max_signal_exit_column_name}")
+    df_wins = len(best_df[(best_df["exit_total"] > 0) & (best_df["trigger"] == -1)])
+    df_losses = len(best_df[(best_df["exit_total"] < 0) & (best_df["trigger"] == -1)])
+    logger.info(f"wins: {df_wins} losses: {df_losses}")
     logger.info(f"final_exit_total: {max_exit_total}")
     logger.info(f"min_exit_total: {best_df['exit_total'].min()}")
 
@@ -166,6 +183,13 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
     logger.info(f"best min source {best_min_max_source_column_name}")
     logger.info(f"best min buy {best_min_max_signal_buy_column_name}")
     logger.info(f"best min exit {best_min_max_signal_exit_column_name}")
+    df_wins = len(
+        not_worst_df[(not_worst_df["exit_total"] > 0) & (not_worst_df["trigger"] == -1)]
+    )
+    df_losses = len(
+        not_worst_df[(not_worst_df["exit_total"] < 0) & (not_worst_df["trigger"] == -1)]
+    )
+    logger.info(f"wins: {df_wins} losses: {df_losses}")
     logger.info(f"final_exit_total: {not_worst_df['exit_total'].iloc[-1]}")
     logger.info(f"min_exit_total: {max_min_exit_total}")
 
@@ -226,27 +250,27 @@ def bot(  # noqa: C901, PLR0915
     logger.info("time now: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     trade_id = -1
-    last_index: Any | None = None
+    last_index: int | None = None
     while True:
         startTime = datetime.now()
         try:
             trade_id = get_open_trades(ctx, account_id)
-            df = getOandaOHLC(ctx, instrument, count=BOT_COUNT, granularity=GRANULARITY)
-            logger.debug(df.head(1).round(3).to_csv())
-            logger.debug(df.tail(1).round(3).to_csv())
+            df = getOandaOHLC(
+                ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY
+            )
         except Exception as err:  # noqa: E722
             logger.error(err)
             trade_id = -1
             sleep(5)
             continue
 
-        first_time_frame_run = last_index is None or last_index != df.last_valid_index()
+        first_time_frame_run = (last_index is None) or last_index != len(df)
 
         notify_abort = kernel(
             df,
-            first_time_frame_run=first_time_frame_run,
+            first_time_frame_run=False,
             wma_period=WMA_PERIOD,
-            optimistic=OPTOMISTIC,
+            optimistic=OPTIMISTIC,
             signal_buy_column=signal_buy_column,
             signal_exit_column=signal_exit_column,
             source_column=source_column,
@@ -256,6 +280,7 @@ def bot(  # noqa: C901, PLR0915
             try:
                 logger.warning("abort. closing trade")
                 close_order(ctx, account_id, trade_id)
+                sleep(60)
             except Exception as err:
                 logger.error(err)
                 trade_id = -1
@@ -267,7 +292,8 @@ def bot(  # noqa: C901, PLR0915
         take_profit = (
             df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
         )
-        if trigger == 1 and trade_id == -1:
+        wma = df["wma"].iloc[-1]
+        if trigger == 1 and trade_id == -1 and not notify_abort:
             try:
                 trade_id = place_order(
                     ctx,
@@ -275,7 +301,8 @@ def bot(  # noqa: C901, PLR0915
                     instrument,
                     amount,
                     take_profit=take_profit,
-                    stop_loss=df["atr"].iloc[-1],
+                    trailing_distance=df["atr"].iloc[-1],
+                    stop_loss=wma,
                 )
                 continue
             except Exception as err:
@@ -289,17 +316,23 @@ def bot(  # noqa: C901, PLR0915
             except Exception as err:
                 logger.error(err)
 
-        endTime = datetime.now()
-        last_index = df.last_valid_index()
         # print the results
+        endTime = datetime.now()
         report(df)
         logger.info(
-            f"columns used: {source_column}, {signal_buy_column}, {signal_exit_column}"
+            f"columns used: so:{source_column}, sib:{signal_buy_column}, sie:{signal_exit_column}"
         )
+        logger.info(f"trade id: {trade_id}")
+        logger.info(f"{last_index} {len(df)}")
+        logger.info(f"first time frame run: {first_time_frame_run}")
+        logger.info(f"notify abort: {notify_abort}")
         logger.info(f"run interval: {endTime - startTime}")
         logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
-        # if it's been over 30 minutes since last back test
+        last_index = len(df)
+        notify_abort = False
+
+        # backtest if needed
         if (
             trade_id == -1
             and (endTime - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
@@ -313,7 +346,31 @@ def bot(  # noqa: C901, PLR0915
             signal_exit_column = columns[2]
             last_backtest_time = datetime.now()
 
-        sleep(REFRESH_RATE)
+        sleep(1)
+
+        # sleep_until_next_five_minute_mark()
+
+
+def sleep_until_next_five_minute_mark():  # noqa: D103
+    now = datetime.datetime.now()
+    minutes = now.minute
+
+    # calculate the time to sleep until
+    if minutes % 5 == 0:
+        sleep_until = now.replace(second=1, microsecond=0)
+    else:
+        next_five_minute_mark = (minutes // 5 + 1) * 5
+        sleep_until = now.replace(minute=next_five_minute_mark, second=1, microsecond=0)
+
+        # if the next five minute mark is in the next hour, adjust the hour
+        if sleep_until.minute < now.minute:
+            sleep_until = sleep_until.replace(hour=now.hour + 1)
+
+    # calculate the time to sleep
+    sleep_time = (sleep_until - now).total_seconds()
+
+    # sleep
+    sleep(sleep_time)
 
 
 if __name__ == "__main__":
