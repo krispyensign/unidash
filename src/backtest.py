@@ -141,30 +141,36 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                     best_max_signal_exit_column_name = signal_exit_column_name
                     best_max_source_column_name = source_column_name
                     best_df = df.copy()
-
-    logger.debug("==best combination")
-    logger.debug(f"best source {best_max_source_column_name}")
-    logger.debug(f"best buy {best_max_signal_buy_column_name}")
-    logger.debug(f"best exit {best_max_signal_exit_column_name}")
+    
     df_wins = len(best_df[(best_df["exit_total"] > 0) & (best_df["trigger"] == -1)])
     df_losses = len(best_df[(best_df["exit_total"] < 0) & (best_df["trigger"] == -1)])
-    logger.debug(f"wins: {df_wins} losses: {df_losses}")
-    logger.debug(f"final_exit_total: {max_exit_total}")
-    logger.debug(f"min_exit_total: {best_df['exit_total'].min()}")
+    logger.debug(
+        "best max found so:%s sib:%s sie:%s w:%s l:%s q_max:%s q_min:%s" ,
+        best_max_source_column_name,
+        best_max_signal_buy_column_name,
+        best_max_signal_exit_column_name,
+        df_wins,
+        df_losses,
+        max_exit_total,
+        best_df["exit_total"].min(),
+    )
 
-    logger.debug("==not worst combination")
-    logger.debug(f"best min source {best_min_max_source_column_name}")
-    logger.debug(f"best min buy {best_min_max_signal_buy_column_name}")
-    logger.debug(f"best min exit {best_min_max_signal_exit_column_name}")
     df_wins = len(
         not_worst_df[(not_worst_df["exit_total"] > 0) & (not_worst_df["trigger"] == -1)]
     )
     df_losses = len(
         not_worst_df[(not_worst_df["exit_total"] < 0) & (not_worst_df["trigger"] == -1)]
     )
-    logger.debug(f"wins: {df_wins} losses: {df_losses}")
-    logger.debug(f"final_exit_total: {not_worst_df['exit_total'].iloc[-1]}")
-    logger.debug(f"min_exit_total: {max_min_exit_total}")
+    logger.debug(
+        "not worst found so:%s sib:%s sie:%s w:%s l:%s q_max:%s q_min:%s" ,
+        best_min_max_source_column_name,
+        best_min_max_signal_buy_column_name,
+        best_min_max_signal_exit_column_name,
+        df_wins,
+        df_losses,
+        not_worst_df["exit_total"].iloc[-1],
+        not_worst_df["exit_total"].min(),
+    )
 
     endTime = datetime.now()
     logger.info(f"run interval: {endTime - start_time}")
@@ -175,12 +181,14 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
         max_min_exit_total > best_df["exit_total"].min()
         and not_worst_df["exit_total"].iloc[-1] > 0
     ):
+        logger.info("best min selected")
         return (
             best_min_max_source_column_name,
             best_min_max_signal_buy_column_name,
             best_min_max_signal_exit_column_name,
         )
 
+    logger.info("best max selected")
     return (
         best_max_source_column_name,
         best_max_signal_buy_column_name,
