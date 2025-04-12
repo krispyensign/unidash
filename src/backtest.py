@@ -2,7 +2,7 @@ from datetime import datetime  # noqa: D100
 import pandas as pd
 import v20  # type: ignore
 
-from constants import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
+from config import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
 from kernel import kernel
 from exchange import (
     getOandaOHLC,
@@ -115,7 +115,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                 exit_total = df["exit_total"].iloc[-1]
                 min_exit_total = df["exit_total"].min()
                 if min_exit_total > max_min_exit_total:
-                    logger.info(
+                    logger.debug(
                         "!!new min found q:%s so:%s sib:%s sie:%s ",
                         min_exit_total,
                         source_column_name,
@@ -129,7 +129,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                     not_worst_df = df.copy()
 
                 if exit_total > max_exit_total:
-                    logger.info(
+                    logger.debug(
                         "!!new max found q:%s so:%s sib:%s sie:%s",
                         exit_total,
                         source_column_name,
@@ -142,33 +142,33 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                     best_max_source_column_name = source_column_name
                     best_df = df.copy()
 
-    logger.info("==best combination")
-    logger.info(f"best source {best_max_source_column_name}")
-    logger.info(f"best buy {best_max_signal_buy_column_name}")
-    logger.info(f"best exit {best_max_signal_exit_column_name}")
+    logger.debug("==best combination")
+    logger.debug(f"best source {best_max_source_column_name}")
+    logger.debug(f"best buy {best_max_signal_buy_column_name}")
+    logger.debug(f"best exit {best_max_signal_exit_column_name}")
     df_wins = len(best_df[(best_df["exit_total"] > 0) & (best_df["trigger"] == -1)])
     df_losses = len(best_df[(best_df["exit_total"] < 0) & (best_df["trigger"] == -1)])
-    logger.info(f"wins: {df_wins} losses: {df_losses}")
-    logger.info(f"final_exit_total: {max_exit_total}")
-    logger.info(f"min_exit_total: {best_df['exit_total'].min()}")
+    logger.debug(f"wins: {df_wins} losses: {df_losses}")
+    logger.debug(f"final_exit_total: {max_exit_total}")
+    logger.debug(f"min_exit_total: {best_df['exit_total'].min()}")
 
-    logger.info("==not worst combination")
-    logger.info(f"best min source {best_min_max_source_column_name}")
-    logger.info(f"best min buy {best_min_max_signal_buy_column_name}")
-    logger.info(f"best min exit {best_min_max_signal_exit_column_name}")
+    logger.debug("==not worst combination")
+    logger.debug(f"best min source {best_min_max_source_column_name}")
+    logger.debug(f"best min buy {best_min_max_signal_buy_column_name}")
+    logger.debug(f"best min exit {best_min_max_signal_exit_column_name}")
     df_wins = len(
         not_worst_df[(not_worst_df["exit_total"] > 0) & (not_worst_df["trigger"] == -1)]
     )
     df_losses = len(
         not_worst_df[(not_worst_df["exit_total"] < 0) & (not_worst_df["trigger"] == -1)]
     )
-    logger.info(f"wins: {df_wins} losses: {df_losses}")
-    logger.info(f"final_exit_total: {not_worst_df['exit_total'].iloc[-1]}")
-    logger.info(f"min_exit_total: {max_min_exit_total}")
+    logger.debug(f"wins: {df_wins} losses: {df_losses}")
+    logger.debug(f"final_exit_total: {not_worst_df['exit_total'].iloc[-1]}")
+    logger.debug(f"min_exit_total: {max_min_exit_total}")
 
     endTime = datetime.now()
     logger.info(f"run interval: {endTime - start_time}")
-    logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
+    logger.debug("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
 
     # choose the least worst combination to minimize loss
     if (

@@ -5,7 +5,7 @@ import pandas as pd
 import v20  # type: ignore
 
 from backtest import backtest
-from constants import (
+from config import (
     BACKTEST_COUNT,
     BACKTEST_INTERVAL,
     GRANULARITY,

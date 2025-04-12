@@ -6,16 +6,30 @@ import sys
 from backtest import backtest
 from bot import bot
 
-logger = logging.getLogger("main.py")
-
+logging.root.handlers = []
 
 if __name__ == "__main__":
     if "backtest" in sys.argv[1]:
-        logging.basicConfig(level=logging.DEBUG, filename="backtest.log")
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler("backtest.log"),
+                logging.StreamHandler()
+            ]
+        )
+        logger = logging.getLogger("main.py")
         result = backtest(instrument=sys.argv[3], token=sys.argv[2])
         logger.info("so:%s sib:%s sie:%s", result[0], result[1], result[2])
     elif "bot" in sys.argv[1]:
-        logging.basicConfig(level=logging.DEBUG, filename="bot.log")
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.FileHandler("bot.log"),
+                logging.StreamHandler()
+            ]
+        )
         bot(sys.argv[2], sys.argv[3], sys.argv[4], 1000)
     else:
         print(sys.argv)
