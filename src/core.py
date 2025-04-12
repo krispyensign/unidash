@@ -55,11 +55,8 @@ def wma_signals(  # noqa: PLR0913
     df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
-    df.loc[
-        (df[signal_exit_column] < df["wma"]) & (df["trigger"] != 1), "signal"
-    ] = 0
+    df.loc[(df[signal_exit_column] < df["wma"]) & (df["trigger"] != 1), "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-
 
 
 def kernel(  # noqa: PLR0913
@@ -130,4 +127,3 @@ def kernel(  # noqa: PLR0913
 
     # calculate the exit total
     exit_total(df)
-
