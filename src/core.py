@@ -3,8 +3,6 @@ from calc import entry_price, exit_total, take_profit, atr
 from chart import heikin_ashi
 import pandas as pd
 
-Thursday = 4
-
 
 def wma_signals(  # noqa: PLR0913
     df: pd.DataFrame,
@@ -122,6 +120,7 @@ def kernel(  # noqa: PLR0913
     entry_price(df, optimistic)
 
     # recalculate the entry prices after a take profit
+    # for internally managed take profits
     if take_profit_value > 0:
         take_profit(df, take_profit_value, optimistic)
 

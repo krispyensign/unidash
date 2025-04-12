@@ -7,7 +7,7 @@ import logging
 Thursday = 4
 
 
-logger = logging.getLogger("echange.py")
+logger = logging.getLogger("exchange.py")
 
 
 def getOandaBalance(ctx: v20.Context, account_id: str) -> float:
