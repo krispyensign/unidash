@@ -3,7 +3,7 @@ import pandas as pd
 import v20  # type: ignore
 
 from constants import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
-from core import kernel
+from kernel import kernel
 from exchange import (
     getOandaOHLC,
 )
@@ -110,26 +110,17 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                 df_wins = len(df[(df["exit_total"] > 0) & (df["trigger"] == -1)])
                 df_losses = len(df[(df["exit_total"] < 0) & (df["trigger"] == -1)])
                 if df_wins <= df_losses:
-                    # logger.debug(
-                    #     "skipping q:%s sib:%s sie:%s so:%s wins:%s losses:%s",
-                    #     df["exit_total"].iloc[-1],
-                    #     signal_buy_column_name,
-                    #     signal_exit_column_name,
-                    #     source_column_name,
-                    #     df_wins,
-                    #     df_losses,
-                    # )
                     continue
 
                 exit_total = df["exit_total"].iloc[-1]
                 min_exit_total = df["exit_total"].min()
                 if min_exit_total > max_min_exit_total:
                     logger.info(
-                        "!!new min found q:%s sib:%s sie:%s so:%s",
+                        "!!new min found q:%s so:%s sib:%s sie:%s ",
                         min_exit_total,
+                        source_column_name,
                         signal_buy_column_name,
                         signal_exit_column_name,
-                        source_column_name,
                     )
                     max_min_exit_total = min_exit_total
                     best_min_max_signal_buy_column_name = signal_buy_column_name
@@ -139,11 +130,11 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
 
                 if exit_total > max_exit_total:
                     logger.info(
-                        "!!new max found q:%s sib:%s sie:%s so:%s",
+                        "!!new max found q:%s so:%s sib:%s sie:%s",
                         exit_total,
+                        source_column_name,
                         signal_buy_column_name,
                         signal_exit_column_name,
-                        source_column_name,
                     )
                     max_exit_total = exit_total
                     best_max_signal_buy_column_name = signal_buy_column_name

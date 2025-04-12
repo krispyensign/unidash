@@ -14,7 +14,7 @@ from constants import (
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
 )
-from core import kernel
+from kernel import kernel
 from reporting import report
 from exchange import (
     close_order,
@@ -24,6 +24,7 @@ from exchange import (
 )
 
 logger = logging.getLogger("main.py")
+
 
 def bot(  # noqa: C901, PLR0915
     token: str, account_id: str, instrument: str, amount: float
@@ -143,27 +144,3 @@ def bot(  # noqa: C901, PLR0915
             last_backtest_time = datetime.now()
 
         sleep(REFRESH_RATE)
-
-        # sleep_until_next_five_minute_mark()
-
-
-def sleep_until_next_five_minute_mark():  # noqa: D103
-    now = datetime.datetime.now()
-    minutes = now.minute
-
-    # calculate the time to sleep until
-    if minutes % 5 == 0:
-        sleep_until = now.replace(second=1, microsecond=0)
-    else:
-        next_five_minute_mark = (minutes // 5 + 1) * 5
-        sleep_until = now.replace(minute=next_five_minute_mark, second=1, microsecond=0)
-
-        # if the next five minute mark is in the next hour, adjust the hour
-        if sleep_until.minute < now.minute:
-            sleep_until = sleep_until.replace(hour=now.hour + 1)
-
-    # calculate the time to sleep
-    sleep_time = (sleep_until - now).total_seconds()
-
-    # sleep
-    sleep(sleep_time)

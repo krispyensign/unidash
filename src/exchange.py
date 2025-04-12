@@ -4,9 +4,6 @@ import v20  # type: ignore
 import pandas as pd
 import logging
 
-Thursday = 4
-
-
 logger = logging.getLogger("exchange.py")
 
 
