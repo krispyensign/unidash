@@ -5,7 +5,7 @@ import pandas as pd
 import v20  # type: ignore
 
 from backtest import backtest
-from config import (
+from core.config import (
     BACKTEST_COUNT,
     BACKTEST_INTERVAL,
     GRANULARITY,
@@ -14,7 +14,7 @@ from config import (
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
 )
-from kernel import kernel
+from core.kernel import kernel
 from reporting import report
 from exchange import (
     close_order,

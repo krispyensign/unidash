@@ -1,6 +1,6 @@
 import talib  # noqa: D100
-from calc import entry_price, exit_total, take_profit, atr
-from chart import heikin_ashi
+from .calc import entry_price, exit_total, take_profit, atr
+from .chart import heikin_ashi
 import pandas as pd
 
 

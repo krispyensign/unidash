@@ -18,6 +18,7 @@ dependencies = [
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/*.py",
+    "src/core/*.py",
 ]
 
 [project.optional-dependencies]

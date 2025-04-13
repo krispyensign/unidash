@@ -2,8 +2,8 @@ from datetime import datetime  # noqa: D100
 import pandas as pd
 import v20  # type: ignore
 
-from config import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
-from kernel import kernel
+from core.config import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
+from core.kernel import kernel
 from exchange import (
     getOandaOHLC,
 )
