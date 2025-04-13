@@ -141,11 +141,11 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
                     best_max_signal_exit_column_name = signal_exit_column_name
                     best_max_source_column_name = source_column_name
                     best_df = df.copy()
-    
+
     df_wins = len(best_df[(best_df["exit_total"] > 0) & (best_df["trigger"] == -1)])
     df_losses = len(best_df[(best_df["exit_total"] < 0) & (best_df["trigger"] == -1)])
     logger.debug(
-        "best max found so:%s sib:%s sie:%s w:%s l:%s q_max:%s q_min:%s" ,
+        "best max found so:%s sib:%s sie:%s w:%s l:%s q_max:%s q_min:%s",
         best_max_source_column_name,
         best_max_signal_buy_column_name,
         best_max_signal_exit_column_name,
@@ -162,7 +162,7 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
         not_worst_df[(not_worst_df["exit_total"] < 0) & (not_worst_df["trigger"] == -1)]
     )
     logger.debug(
-        "not worst found so:%s sib:%s sie:%s w:%s l:%s q_max:%s q_min:%s" ,
+        "not worst found so:%s sib:%s sie:%s w:%s l:%s q_max:%s q_min:%s",
         best_min_max_source_column_name,
         best_min_max_signal_buy_column_name,
         best_min_max_signal_exit_column_name,

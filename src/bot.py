@@ -26,9 +26,27 @@ from exchange import (
 logger = logging.getLogger("bot")
 
 
-def bot(  # noqa: C901, PLR0915
-    token: str, account_id: str, instrument: str, amount: float
-) -> None:
+class Record:
+    """Record class."""
+
+    ATR: float
+    take_profit: float
+    wma: float
+    signal: int
+    trigger: int
+
+    def __init__(self, df: pd.DataFrame):
+        """Initialize a Record object."""
+        self.ATR = df["ATR"].iloc[-1]
+        self.take_profit = (
+            df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
+        )
+        self.wma = df["wma"].iloc[-1]
+        self.signal = df["signal"].iloc[-1]
+        self.trigger = df["trigger"].iloc[-1]
+
+
+def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
     """Bot that trades on Oanda.
 
     This function trades on Oanda using the Oanda API. It places market orders based on the
@@ -48,34 +66,27 @@ def bot(  # noqa: C901, PLR0915
 
     """
     df: pd.DataFrame
-    start_time = datetime.now()
-    columns = backtest(
+    app_start_time = datetime.now()
+    source_column, signal_buy_column, signal_exit_column = backtest(
         instrument=instrument,
         token=token,
     )
-    source_column = columns[0]
-    signal_buy_column = columns[1]
-    signal_exit_column = columns[2]
     last_backtest_time = datetime.now()
-    logger.info("starting bot")
-    logger.info("time now: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
+    logger.info("starting bot.")
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     trade_id = -1
-    last_index: int | None = None
     while True:
-        startTime = datetime.now()
+        run_start_time = datetime.now()
         try:
             trade_id = get_open_trades(ctx, account_id)
             df = getOandaOHLC(
                 ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY
             )
-        except Exception as err:  # noqa: E722
+        except Exception as err:
             logger.error(err)
             trade_id = -1
             sleep(5)
             continue
-
-        first_time_frame_run = (last_index is None) or last_index != len(df)
 
         kernel(
             df,
@@ -85,23 +96,18 @@ def bot(  # noqa: C901, PLR0915
             signal_exit_column=signal_exit_column,
             source_column=source_column,
         )
+        rec = Record(df)
 
-        trigger = df["trigger"].iloc[-1]
-        signal = df["signal"].iloc[-1]
-        take_profit = (
-            df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
-        )
-        wma = df["wma"].iloc[-1]
-        if trigger == 1 and trade_id == -1:
+        if rec.trigger == 1 and trade_id == -1:
             try:
                 trade_id = place_order(
                     ctx,
                     account_id,
                     instrument,
                     amount,
-                    take_profit=take_profit,
-                    trailing_distance=df["atr"].iloc[-1],
-                    stop_loss=wma,
+                    take_profit=rec.take_profit,
+                    trailing_distance=rec.ATR,
+                    stop_loss=rec.wma,
                 )
                 continue
             except Exception as err:
@@ -109,7 +115,7 @@ def bot(  # noqa: C901, PLR0915
                 logger.error(err)
                 sleep(5)
 
-        if trigger != 1 and signal == 0 and trade_id != -1:
+        if rec.trigger != 1 and rec.signal == 0 and trade_id != -1:
             try:
                 close_order(ctx, account_id, trade_id)
             except Exception as err:
@@ -122,25 +128,19 @@ def bot(  # noqa: C901, PLR0915
             f"columns used: so:{source_column}, sib:{signal_buy_column}, sie:{signal_exit_column}"
         )
         logger.info(f"trade id: {trade_id}")
-        logger.info(f"{last_index} {len(df)}")
-        logger.info(f"first time frame run: {first_time_frame_run}")
-        logger.info(f"run interval: {endTime - startTime}")
-        logger.info("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info(f"run interval: {endTime - run_start_time}")
+        logger.info("start time: %s", app_start_time.strftime("%Y-%m-%d %H:%M:%S"))
         logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
-        last_index = len(df)
 
         # backtest if needed
         if (
             trade_id == -1
             and (endTime - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
         ):
-            columns = backtest(
+            source_column, signal_buy_column, signal_exit_column = backtest(
                 instrument=instrument,
                 token=token,
             )
-            source_column = columns[0]
-            signal_buy_column = columns[1]
-            signal_exit_column = columns[2]
             last_backtest_time = datetime.now()
 
         sleep(REFRESH_RATE)
