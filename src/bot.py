@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime  # noqa: D100
 import logging
 from time import sleep
@@ -67,12 +68,13 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
     """
     df: pd.DataFrame
     app_start_time = datetime.now()
-    source_column, signal_buy_column, signal_exit_column = backtest(
+    signal_conf = backtest(
         instrument=instrument,
         token=token,
     )
     last_backtest_time = datetime.now()
     logger.info("starting bot.")
+    
     ctx = v20.Context("api-fxpractice.oanda.com", token=token)
     trade_id = -1
     while True:
@@ -92,9 +94,9 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
             df,
             wma_period=WMA_PERIOD,
             optimistic=OPTIMISTIC,
-            signal_buy_column=signal_buy_column,
-            signal_exit_column=signal_exit_column,
-            source_column=source_column,
+            signal_buy_column=signal_conf.signal_buy_column,
+            signal_exit_column=signal_conf.signal_exit_column,
+            source_column=signal_conf.source_column,
         )
         rec = Record(df)
 
@@ -111,9 +113,10 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
                 )
                 continue
             except Exception as err:
-                trade_id = -1
                 logger.error(err)
-                sleep(5)
+                trade_id = -1
+                sleep(1)
+                continue
 
         if rec.trigger != 1 and rec.signal == 0 and trade_id != -1:
             try:
@@ -122,22 +125,20 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
                 logger.error(err)
 
         # print the results
-        endTime = datetime.now()
+        run_end_time = datetime.now()
         report(df)
-        logger.info(
-            f"columns used: so:{source_column}, sib:{signal_buy_column}, sie:{signal_exit_column}"
-        )
+        logger.info(f"columns used: {signal_conf}")
         logger.info(f"trade id: {trade_id}")
-        logger.info(f"run interval: {endTime - run_start_time}")
-        logger.info("start time: %s", app_start_time.strftime("%Y-%m-%d %H:%M:%S"))
-        logger.info("last run time: %s", endTime.strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info(f"run interval: {run_end_time - run_start_time}")
+        logger.info("up time: %s", (run_end_time - app_start_time))
+        logger.info("last run time: %s", run_end_time.strftime("%Y-%m-%d %H:%M:%S"))
 
         # backtest if needed
         if (
             trade_id == -1
-            and (endTime - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
+            and (run_end_time - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
         ):
-            source_column, signal_buy_column, signal_exit_column = backtest(
+            signal_conf = backtest(
                 instrument=instrument,
                 token=token,
             )

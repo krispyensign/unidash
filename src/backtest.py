@@ -13,7 +13,23 @@ import logging
 logger = logging.getLogger("backtest")
 
 
-def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0915
+class SignalConfig:
+    """SignalConfig class."""
+
+    def __init__(
+        self, source_column: str, signal_buy_column: str, signal_exit_column: str
+    ):
+        """Initialize a SignalConfig object."""
+        self.source_column = source_column
+        self.signal_buy_column = signal_buy_column
+        self.signal_exit_column = signal_exit_column
+
+    def __str__(self):
+        """Return a string representation of the SignalConfig object."""
+        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}"
+
+
+def backtest(instrument: str, token: str) -> SignalConfig:  # noqa: PLR0915
     """Run a backtest of the trading strategy.
 
     Parameters
@@ -182,14 +198,14 @@ def backtest(instrument: str, token: str) -> tuple[str, str, str]:  # noqa: PLR0
         and not_worst_df["exit_total"].iloc[-1] > 0
     ):
         logger.info("best min selected")
-        return (
+        return SignalConfig(
             best_min_max_source_column_name,
             best_min_max_signal_buy_column_name,
             best_min_max_signal_exit_column_name,
         )
 
     logger.info("best max selected")
-    return (
+    return SignalConfig(
         best_max_source_column_name,
         best_max_signal_buy_column_name,
         best_max_signal_exit_column_name,
