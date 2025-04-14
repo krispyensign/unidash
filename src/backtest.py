@@ -6,6 +6,7 @@ from core.config import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
 from core.kernel import kernel
 from exchange import (
     getOandaOHLC,
+    OandaContext,
 )
 
 import logging
@@ -48,7 +49,9 @@ def backtest(instrument: str, token: str) -> SignalConfig:  # noqa: PLR0915
     """
     logger.info("starting backtest")
     start_time = datetime.now()
-    ctx = v20.Context("api-fxpractice.oanda.com", token=token)
+    ctx = OandaContext(
+        v20.Context("api-fxpractice.oanda.com", token=token), None, token
+    )
 
     orig_df = getOandaOHLC(
         ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY
