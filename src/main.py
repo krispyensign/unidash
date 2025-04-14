@@ -31,8 +31,8 @@ if __name__ == "__main__":
     else:
         print(sys.argv)
         print("""
-            WMA HEIKEN ASHI
+            MutantMakerBot
               Usage: 
-                python main.py backtest <some csv file>
+                python main.py backtest <token> <instrument>
                 python main.py bot <token> <account_id> <instrument>
               """)

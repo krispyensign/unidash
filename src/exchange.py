@@ -7,7 +7,17 @@ import logging
 logger = logging.getLogger("exchange")
 
 
-def getOandaBalance(ctx: v20.Context, account_id: str) -> float:
+class OandaContext:
+    """OandaContext class."""
+
+    def __init__(self, ctx: v20.Context, account_id: str, token: str | None):
+        """Initialize a OandaContext object."""
+        self.ctx = ctx
+        self.account_id = account_id
+        self.token = token if token is not None else ""
+
+
+def getOandaBalance(ctx: OandaContext) -> float:
     """Get the current balance from Oanda.
 
     Parameters
@@ -23,7 +33,7 @@ def getOandaBalance(ctx: v20.Context, account_id: str) -> float:
         The current balance in the Oanda account.
 
     """
-    resp = ctx.account.get(account_id)
+    resp = ctx.ctx.account.get(ctx.account_id)
     if resp.body["account"]:
         account: v20.account.Account = resp.body["account"]
         return account.balance
@@ -32,7 +42,7 @@ def getOandaBalance(ctx: v20.Context, account_id: str) -> float:
 
 
 def getOandaOHLC(
-    ctx: v20.Context, instrment: str, granularity: str = "M5", count: int = 288
+    ctx: OandaContext, instrment: str, granularity: str = "M5", count: int = 288
 ) -> pd.DataFrame:
     # create dataframe with candles
     """Get OHLC data from Oanda and convert it into a pandas DataFrame.
@@ -87,7 +97,7 @@ def getOandaOHLC(
         ]
     )
 
-    resp = ctx.instrument.candles(
+    resp = ctx.ctx.instrument.candles(
         instrument=instrment,
         granularity=granularity,
         price="MAB",
@@ -118,8 +128,7 @@ def getOandaOHLC(
 
 
 def place_order(  # noqa: PLR0913
-    ctx: v20.Context,
-    account_id: str,
+    ctx: OandaContext,
     instrument: str,
     amount: float,
     take_profit: float,
@@ -172,8 +181,8 @@ def place_order(  # noqa: PLR0913
         # ),
     )
     logger.info(order.json())
-    resp = ctx.order.create(
-        account_id,
+    resp = ctx.ctx.order.create(
+        ctx.account_id,
         order=order,
     )
 
@@ -197,7 +206,7 @@ def place_order(  # noqa: PLR0913
     return trade_id
 
 
-def close_order(ctx: v20.Context, account_id: str, trade_id: int) -> None:
+def close_order(ctx: OandaContext, trade_id: int) -> None:
     """Close an order on the Oanda API.
 
     Parameters
@@ -210,15 +219,15 @@ def close_order(ctx: v20.Context, account_id: str, trade_id: int) -> None:
         The trade ID of the order to close.
 
     """
-    resp = ctx.trade.close(account_id, trade_id)
+    resp = ctx.ctx.trade.close(ctx.account_id, trade_id)
 
     if resp.body is not None:
         if "orderRejectTransaction" in resp.body:
             raise Exception(resp.body.to_json())
 
 
-def get_open_trades(ctx: v20.Context, account_id: str) -> int:
-    """Get the open trades from the Oanda API.
+def get_open_trade(ctx: OandaContext) -> int:
+    """Get the first open trade.
 
     Parameters
     ----------
@@ -233,7 +242,7 @@ def get_open_trades(ctx: v20.Context, account_id: str) -> int:
         The trade ID of the first open trade.
 
     """
-    resp = ctx.trade.list_open(account_id)
+    resp = ctx.ctx.trade.list_open(ctx.account_id)
     trades: list[v20.trade.Trade] = []
     if resp.body is not None:
         if "trades" in resp.body:
