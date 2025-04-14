@@ -1,6 +1,6 @@
-# MutantMarketBot
+# MutantStopBot
 
-MutantMakerBot is a bot to perform signal generation and backtesting using WMA on different charts.
+MutantStopBot is a bot to perform signal generation and backtesting using WMA on different charts.
 
 ## NOTICE
 
