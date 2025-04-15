@@ -163,7 +163,8 @@ def backtest(instrument: str, token: str) -> SignalConfig:
         round(max_exit_total, 5),
         round(best_df["exit_total"].min(), 5),
     )
-    report(best_df, best_max_conf.signal_buy_column, ENTRY_COLUMN)
+    report(best_df, best_max_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+    best_wins = df_wins - df_losses
 
     df_wins = len(
         not_worst_df[(not_worst_df["exit_value"] > 0) & (not_worst_df["trigger"] == -1)]
@@ -179,17 +180,15 @@ def backtest(instrument: str, token: str) -> SignalConfig:
         round(not_worst_df["exit_total"].iloc[-1], 5),
         round(not_worst_df["exit_total"].min(), 5),
     )
-    report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN)
+    report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+    not_worst_wins = df_wins - df_losses
 
     endTime = datetime.now()
     logger.info(f"run interval: {endTime - start_time}")
     logger.debug("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
 
     # choose the least worst combination to minimize loss
-    if (
-        max_min_exit_total > best_df["exit_total"].min()
-        and not_worst_df["exit_total"].iloc[-1] > 0
-    ):
+    if not_worst_wins >= best_wins:
         logger.info("best min selected")
         return not_worst_conf
 

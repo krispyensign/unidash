@@ -11,6 +11,7 @@ def report(
     df: pd.DataFrame,
     signal_buy_column: str,
     entry_column: str,
+    exit_column: str,
 ):
     """Print a report of the trading results.
 
@@ -22,6 +23,8 @@ def report(
         The column name for the buy signal data.
     entry_column : str
         The column name for the entry price.
+    exit_column : str
+        The column name for the exit price.
 
     """
     df_ticks = df.reset_index()[
@@ -33,8 +36,7 @@ def report(
             "wma",
             signal_buy_column,
             entry_column,
-            "bid_open",
-            "ask_open",
+            exit_column,
             "position_value",
             "exit_value",
             "running_total",

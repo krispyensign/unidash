@@ -116,11 +116,11 @@ def bot_run(
 
     if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
         close_order(ctx, trade_id)
-        report(df, signal_conf.signal_buy_column, ENTRY_COLUMN)
+        report(df, signal_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
         assert trade_id == -1, "trades should not be open"
 
     # print the results
-    report(df, signal_conf.signal_buy_column, ENTRY_COLUMN)
+    report(df, signal_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
 
     return trade_id, None
 
