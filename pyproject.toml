@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name="MutantStopBot"
+name="MutantMarketBot"
 version="v0.0.1"
 dependencies = [
     "requests",
