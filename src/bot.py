@@ -181,6 +181,8 @@ def sleep_until_next_5_minute(trade_id: int = -1):
     now = datetime.now()
     if trade_id == -1:
         next_time = roundUp(now)
+        if (next_time - now) < timedelta(seconds=1):
+            next_time = next_time + timedelta(minutes=5)
         logger.info(
             "sleeping until next 5 minute interval %s",
             next_time.strftime("%Y-%m-%d %H:%M:%S"),
