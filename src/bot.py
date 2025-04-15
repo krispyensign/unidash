@@ -1,6 +1,6 @@
 """Bot that trades on Oanda."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from time import sleep
 import pandas as pd
@@ -9,8 +9,8 @@ import v20  # type: ignore
 from backtest import SignalConfig, backtest
 from core.config import (
     BACKTEST_COUNT,
+    ENTRY_COLUMN,
     GRANULARITY,
-    REFRESH_RATE,
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
 )
@@ -86,6 +86,7 @@ def bot_run(
         wma_period=WMA_PERIOD,
         signal_buy_column=signal_conf.signal_buy_column,
         source_column=signal_conf.source_column,
+        entry_column=ENTRY_COLUMN,
     )
     rec = Record(df)
 
@@ -158,4 +159,27 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
             logger.info(f"columns used: {signal_conf}")
             logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
 
-        sleep(REFRESH_RATE)
+            sleep_until_next_5_minute(trade_id=trade_id)
+
+
+def roundUp(dt):
+    """Round a datetime object to the next 5 minute interval."""
+    # 0 => 4:55
+    # 1 => 4:55
+    # 2 => 4:55
+    # 3 => 4:55
+    # 4 => 4:55
+    # 5 => 9:55
+    # etc...
+    return (dt + timedelta(minutes=5 - dt.minute % 5) - timedelta(minutes=1)).replace(second=55, microsecond=0)
+
+def sleep_until_next_5_minute(trade_id: int = -1):
+    """Sleep until the next 5 minute interval."""
+    now = datetime.now()
+    if trade_id == -1:
+        next_time = roundUp(now)
+        logger.info("sleeping until next 5 minute interval %s", next_time.strftime("%Y-%m-%d %H:%M:%S"))
+        sleep((next_time - now).total_seconds())
+    else:
+        sleep(1)
+        

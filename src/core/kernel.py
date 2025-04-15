@@ -59,6 +59,7 @@ def kernel(
     df: pd.DataFrame,
     signal_buy_column: str = "open",
     source_column: str = "bid_open",
+    entry_column: str = "ask_open",
     wma_period: int = 20,
     take_profit_value: float = 0,
 ) -> None:
@@ -79,6 +80,8 @@ def kernel(
         The column name for the exit signal data, by default "ha_high".
     source_column : str, optional
         The column name for the source data, by default "bid_open".
+    entry_column : str, optional
+        The column name for the entry price, by default "ask_open".
     wma_period : int, optional
         The period for the weighted moving average, by default 20.
     take_profit_value : float, optional
@@ -103,12 +106,12 @@ def kernel(
     )
 
     # calculate the entry prices:
-    entry_price(df, "ask_open")
+    entry_price(df, entry_column=entry_column)
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
     if take_profit_value > 0:
-        take_profit(df, take_profit_value, "ask_open")
+        take_profit(df, take_profit_value, entry_column=entry_column)
 
     # calculate the exit total
     exit_total(df)

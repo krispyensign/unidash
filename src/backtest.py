@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import v20  # type: ignore
 
-from core.config import BACKTEST_COUNT, GRANULARITY, WMA_PERIOD, TAKE_PROFIT_MULTIPLIER
+from core.config import BACKTEST_COUNT, ENTRY_COLUMN, GRANULARITY, WMA_PERIOD, TAKE_PROFIT_MULTIPLIER
 from core.kernel import kernel
 from exchange import (
     getOandaOHLC,
@@ -19,24 +19,28 @@ logger = logging.getLogger("backtest")
 
 SOURCE_COLUMNS = [
     "open",
-    "bid_open",
-    "ask_open",
-    "ha_open",
-    "ha_bid_open",
-    "ha_ask_open",
-]
-SIGNAL_BUY_COLUMNS = [
-    "open",
     "high",
+    "low",
+    "close",
     "bid_open",
+    "bid_low",
     "bid_high",
+    "bid_close",
     "ask_open",
+    "ask_low",
     "ask_high",
+    "ask_close",
     "ha_open",
+    "ha_low",
+    "ha_close",
     "ha_high",
     "ha_bid_open",
+    "ha_bid_low",
+    "ha_bid_close",
     "ha_bid_high",
     "ha_ask_open",
+    "ha_ask_low",
+    "ha_ask_close",
     "ha_ask_high",
 ]
 
@@ -92,10 +96,10 @@ def backtest(instrument: str, token: str) -> SignalConfig:
     not_worst_conf = SignalConfig("", "")
     best_df = pd.DataFrame()
     not_worst_df = pd.DataFrame()
-    total_combinations = len(SOURCE_COLUMNS) * len(SIGNAL_BUY_COLUMNS)
+    total_combinations = len(SOURCE_COLUMNS) * len(SOURCE_COLUMNS)
     logger.info(f"total_combinations: {total_combinations}")
     for source_column_name in SOURCE_COLUMNS:
-        for signal_buy_column_name in SIGNAL_BUY_COLUMNS:
+        for signal_buy_column_name in SOURCE_COLUMNS:
             df = orig_df.copy()
             kernel(
                 df,
@@ -103,11 +107,13 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 signal_buy_column=signal_buy_column_name,
                 wma_period=WMA_PERIOD,
                 take_profit_value=TAKE_PROFIT_MULTIPLIER,
+                entry_column=ENTRY_COLUMN,
             )
 
-            df_wins = len(df[(df["exit_total"] > 0) & (df["trigger"] == -1)])
-            df_losses = len(df[(df["exit_total"] < 0) & (df["trigger"] == -1)])
-            if df_wins <= df_losses:
+
+            df_wins = len(df[(df["exit_value"] > 0) & (df["trigger"] == -1)])
+            df_losses = len(df[(df["exit_value"] < 0) & (df["trigger"] == -1)])
+            if df_losses > df_wins:
                 continue
 
             exit_total = df["exit_total"].iloc[-1]
