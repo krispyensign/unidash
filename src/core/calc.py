@@ -27,7 +27,7 @@ def exit_total(df: pd.DataFrame) -> None:
     df["running_total"] = df["exit_total"] + (df["position_value"] * df["signal"])
 
 
-def take_profit(df: pd.DataFrame, take_profit: float, optimistic: bool) -> None:
+def take_profit(df: pd.DataFrame, take_profit: float, entry_column: str) -> None:
     """Apply a take profit strategy to the trading data.
 
     Parameters
@@ -36,8 +36,8 @@ def take_profit(df: pd.DataFrame, take_profit: float, optimistic: bool) -> None:
         The DataFrame containing the trading data.
     take_profit : float
         The take profit value as a multiplier of the atr.
-    optimistic : bool
-        Whether to use the ask_open or ask_high as the entry price.
+    entry_column : str
+        The column name for the entry price.
 
     Returns
     -------
@@ -54,10 +54,10 @@ def take_profit(df: pd.DataFrame, take_profit: float, optimistic: bool) -> None:
     """
     df.loc[(df["position_value"] > (df["atr"] * take_profit)), "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-    entry_price(df, optimistic)
+    entry_price(df, entry_column=entry_column)
 
 
-def entry_price(df: pd.DataFrame, optimistic: bool) -> None:
+def entry_price(df: pd.DataFrame, entry_column: str) -> None:
     """Calculate the entry price for a given trading signal.
 
     When the trigger is 1, use the ask_open price (buy signal), so when the trigger is -1, it means
@@ -69,8 +69,8 @@ def entry_price(df: pd.DataFrame, optimistic: bool) -> None:
     ----------
     df : pd.DataFrame
         The DataFrame containing the trading data.
-    optimistic : bool
-        Whether to use the ask_open or ask_high as the entry price.
+    entry_column : str
+        The column name for the entry price.
 
     Returns
     -------
@@ -85,9 +85,8 @@ def entry_price(df: pd.DataFrame, optimistic: bool) -> None:
     and 'entry_price' columns times the 'internal_bit_mask' column.
 
     """
-    open_field = "ask_open" if optimistic else "ask_high"
     df["internal_bit_mask"] = df["signal"] | abs(df["trigger"])
-    df["entry_price"] = np.where(df["trigger"] == 1, df[open_field], np.nan)
+    df["entry_price"] = np.where(df["trigger"] == 1, df[entry_column], np.nan)
     df["entry_price"] = df["entry_price"].ffill() * df["internal_bit_mask"]
     df["position_value"] = (df["bid_open"] - df["entry_price"]) * df[
         "internal_bit_mask"

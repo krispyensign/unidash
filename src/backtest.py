@@ -2,7 +2,7 @@ from datetime import datetime  # noqa: D100
 import pandas as pd
 import v20  # type: ignore
 
-from core.config import BACKTEST_COUNT, GRANULARITY, OPTIMISTIC, WMA_PERIOD
+from core.config import BACKTEST_COUNT, GRANULARITY, WMA_PERIOD, TAKE_PROFIT_MULTIPLIER
 from core.kernel import kernel
 from exchange import (
     getOandaOHLC,
@@ -76,9 +76,6 @@ def backtest(instrument: str, token: str) -> SignalConfig:  # noqa: PLR0915
         "open",
         "bid_open",
         "ask_open",
-        "ha_open",
-        "ha_bid_open",
-        "ha_ask_open",
     ]
     signal_buy_columns = [
         "open",
@@ -87,12 +84,6 @@ def backtest(instrument: str, token: str) -> SignalConfig:  # noqa: PLR0915
         "bid_high",
         "ask_open",
         "ask_high",
-        "ha_open",
-        "ha_high",
-        "ha_bid_open",
-        "ha_bid_high",
-        "ha_ask_open",
-        "ha_ask_high",
     ]
     signal_exit_columns = [
         "open",
@@ -101,12 +92,6 @@ def backtest(instrument: str, token: str) -> SignalConfig:  # noqa: PLR0915
         "bid_low",
         "ask_open",
         "ask_low",
-        "ha_open",
-        "ha_low",
-        "ha_bid_open",
-        "ha_bid_low",
-        "ha_ask_open",
-        "ha_ask_low",
     ]
     total_combinations = (
         len(source_columns) * len(signal_buy_columns) * len(signal_exit_columns)
@@ -122,8 +107,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:  # noqa: PLR0915
                     signal_buy_column=signal_buy_column_name,
                     signal_exit_column=signal_exit_column_name,
                     wma_period=WMA_PERIOD,
-                    # take_profit_value=0,
-                    optimistic=OPTIMISTIC,
+                    take_profit_value=TAKE_PROFIT_MULTIPLIER,
                 )
 
                 df_wins = len(df[(df["exit_total"] > 0) & (df["trigger"] == -1)])

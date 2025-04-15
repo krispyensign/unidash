@@ -9,9 +9,7 @@ import v20  # type: ignore
 from backtest import SignalConfig, backtest
 from core.config import (
     BACKTEST_COUNT,
-    BACKTEST_INTERVAL,
     GRANULARITY,
-    OPTIMISTIC,
     REFRESH_RATE,
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
@@ -41,7 +39,7 @@ class Record:
 
     def __init__(self, df: pd.DataFrame):
         """Initialize a Record object."""
-        self.ATR = df["ATR"].iloc[-1]
+        self.ATR = df["atr"].iloc[-1]
         self.take_profit = (
             df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
         )
@@ -61,11 +59,11 @@ class PerfTimer:
     def __enter__(self):
         """Start the timer."""
         self.start = datetime.now()
-        self.end = datetime.now()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Stop the timer."""
+        self.end = datetime.now()
         logger.info(f"run interval: {self.end - self.start}")
         logger.info("up time: %s", (self.end - self.app_start_time))
         logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
@@ -86,7 +84,6 @@ def bot_run(
     kernel(
         df,
         wma_period=WMA_PERIOD,
-        optimistic=OPTIMISTIC,
         signal_buy_column=signal_conf.signal_buy_column,
         signal_exit_column=signal_conf.signal_exit_column,
         source_column=signal_conf.source_column,
@@ -142,7 +139,6 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
-    last_backtest_time = datetime.now()
     logger.info("starting bot.")
 
     ctx = OandaContext(
@@ -157,19 +153,7 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
                 sleep(5)
                 continue
 
-            run_end_time = datetime.now()
             logger.info(f"columns used: {signal_conf}")
             logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
-
-        # backtest if needed
-        if (
-            trade_id == -1
-            and (run_end_time - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
-        ):
-            signal_conf = backtest(
-                instrument=instrument,
-                token=token,
-            )
-            last_backtest_time = datetime.now()
 
         sleep(REFRESH_RATE)

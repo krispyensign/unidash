@@ -10,11 +10,11 @@ logger = logging.getLogger("exchange")
 class OandaContext:
     """OandaContext class."""
 
-    def __init__(self, ctx: v20.Context, account_id: str, token: str | None):
+    def __init__(self, ctx: v20.Context, account_id: str | None, token: str):
         """Initialize a OandaContext object."""
         self.ctx = ctx
-        self.account_id = account_id
-        self.token = token if token is not None else ""
+        self.account_id = account_id if account_id is not None else ""
+        self.token = token
 
 
 def getOandaBalance(ctx: OandaContext) -> float:
@@ -93,7 +93,6 @@ def getOandaOHLC(
             "ask_high",
             "ask_low",
             "ask_close",
-            "atr",
         ]
     )
 
@@ -173,9 +172,9 @@ def place_order(  # noqa: PLR0913
         takeProfitOnFill=v20.transaction.TakeProfitDetails(
             price=f"{round(take_profit, decimals)}"
         ),
-        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
-            distance=f"{round(trailing_distance + 0.01, decimals)}",
-        ),
+        # trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
+        #     distance=f"{round(trailing_distance + 0.01, decimals)}",
+        # ),
         # stopLossOnFill=v20.transaction.StopLossDetails(
         #     price=f"{round(stop_loss, decimals)}"
         # ),
