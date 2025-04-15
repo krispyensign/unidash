@@ -134,7 +134,7 @@ def place_order(
 
     Parameters
     ----------
-    ctx : OandaContext 
+    ctx : OandaContext
         The Oanda API context.
     instrument : str
         The instrument to place the order on.
@@ -198,7 +198,7 @@ def close_order(ctx: OandaContext, trade_id: int) -> None:
 
     Parameters
     ----------
-    ctx : OandaContext 
+    ctx : OandaContext
         The Oanda API context.
     trade_id : str
         The trade ID of the order to close.

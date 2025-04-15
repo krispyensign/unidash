@@ -40,6 +40,7 @@ SIGNAL_BUY_COLUMNS = [
     "ha_ask_high",
 ]
 
+
 class SignalConfig:
     """SignalConfig class."""
 
@@ -132,9 +133,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                     signal_buy_column_name,
                 )
                 max_exit_total = exit_total
-                best_max_conf = SignalConfig(
-                    source_column_name, signal_buy_column_name
-                )
+                best_max_conf = SignalConfig(source_column_name, signal_buy_column_name)
                 best_df = df.copy()
 
     df_wins = len(best_df[(best_df["exit_value"] > 0) & (best_df["trigger"] == -1)])

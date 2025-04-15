@@ -1,4 +1,5 @@
 """Functions for reporting trading results."""
+
 import pandas as pd
 import logging
 
