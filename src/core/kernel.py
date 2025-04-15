@@ -1,4 +1,6 @@
-import talib  # noqa: D100
+import talib
+
+from core.chart import heikin_ashi  # noqa: D100
 from .calc import entry_price, exit_total, take_profit, atr
 import pandas as pd
 
@@ -7,7 +9,6 @@ def wma_signals(  # noqa: PLR0913
     df: pd.DataFrame,
     source_column: str = "open",
     signal_buy_column: str = "bid_low",
-    signal_exit_column: str = "bid_high",
     wma_period: int = 20,
 ) -> None:
     """Generate trading signals based on a comparison of the Heikin-Ashi highs and lows to the wma.
@@ -22,8 +23,6 @@ def wma_signals(  # noqa: PLR0913
         The column name for the source data.
     signal_buy_column : str, optional
         The column name for the buy signal data.
-    signal_exit_column : str, optional
-        The column name for the exit signal data.
     wma_period : int, optional
         The period for the weighted moving average, by default 20
 
@@ -49,17 +48,14 @@ def wma_signals(  # noqa: PLR0913
     # F      F      X
 
     # check if the buy column is greater than the wma
-    df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
-    df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-
-    df.loc[(df[signal_exit_column] < df["wma"]) & (df["trigger"] != 1), "signal"] = 0
+    buy_selector = df[signal_buy_column] > df["wma"]
+    df.loc[buy_selector, "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
 def kernel(  # noqa: PLR0913
     df: pd.DataFrame,
     signal_buy_column: str = "open",
-    signal_exit_column: str = "bid_high",
     source_column: str = "bid_open",
     wma_period: int = 20,
     take_profit_value: float = 0,
@@ -89,6 +85,7 @@ def kernel(  # noqa: PLR0913
 
     """
     # calculate the ATR for the trailing stop loss
+    heikin_ashi(df)
     atr(df, wma_period)
 
     # signal using the close prices
@@ -98,7 +95,6 @@ def kernel(  # noqa: PLR0913
     # NOTE: usage of close prices differs online than in offline trading
     wma_signals(
         df,
-        signal_exit_column=signal_exit_column,
         signal_buy_column=signal_buy_column,
         wma_period=wma_period,
         source_column=source_column,

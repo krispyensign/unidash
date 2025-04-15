@@ -85,7 +85,6 @@ def bot_run(
         df,
         wma_period=WMA_PERIOD,
         signal_buy_column=signal_conf.signal_buy_column,
-        signal_exit_column=signal_conf.signal_exit_column,
         source_column=signal_conf.source_column,
     )
     rec = Record(df)
@@ -112,11 +111,12 @@ def bot_run(
 
     if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
         close_order(ctx, trade_id)
+        report(df, signal_conf.signal_buy_column)
         assert trade_id == -1, "trades should not be open"
 
 
     # print the results
-    report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
+    report(df, signal_conf.signal_buy_column)
 
     return trade_id, None
 
