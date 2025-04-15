@@ -171,15 +171,20 @@ def roundUp(dt):
     # 4 => 4:55
     # 5 => 9:55
     # etc...
-    return (dt + timedelta(minutes=5 - dt.minute % 5) - timedelta(minutes=1)).replace(second=55, microsecond=0)
+    return (dt + timedelta(minutes=5 - dt.minute % 5) - timedelta(minutes=1)).replace(
+        second=55, microsecond=0
+    )
+
 
 def sleep_until_next_5_minute(trade_id: int = -1):
     """Sleep until the next 5 minute interval."""
     now = datetime.now()
     if trade_id == -1:
         next_time = roundUp(now)
-        logger.info("sleeping until next 5 minute interval %s", next_time.strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info(
+            "sleeping until next 5 minute interval %s",
+            next_time.strftime("%Y-%m-%d %H:%M:%S"),
+        )
         sleep((next_time - now).total_seconds())
     else:
         sleep(1)
-        

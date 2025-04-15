@@ -4,7 +4,13 @@ from datetime import datetime
 import pandas as pd
 import v20  # type: ignore
 
-from core.config import BACKTEST_COUNT, ENTRY_COLUMN, GRANULARITY, WMA_PERIOD, TAKE_PROFIT_MULTIPLIER
+from core.config import (
+    BACKTEST_COUNT,
+    ENTRY_COLUMN,
+    GRANULARITY,
+    WMA_PERIOD,
+    TAKE_PROFIT_MULTIPLIER,
+)
 from core.kernel import kernel
 from exchange import (
     getOandaOHLC,
@@ -109,7 +115,6 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 take_profit_value=TAKE_PROFIT_MULTIPLIER,
                 entry_column=ENTRY_COLUMN,
             )
-
 
             df_wins = len(df[(df["exit_value"] > 0) & (df["trigger"] == -1)])
             df_losses = len(df[(df["exit_value"] < 0) & (df["trigger"] == -1)])
