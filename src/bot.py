@@ -179,7 +179,7 @@ def roundUp(dt):
     # 5 => 9:55
     # etc...
     return (dt + timedelta(minutes=5 - dt.minute % 5)).replace(
-        second=1, microsecond=0
+        second=0, millisecond=100, microsecond=0
     )
 
 
