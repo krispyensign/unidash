@@ -1,6 +1,6 @@
 """Bot that trades on Oanda."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from time import sleep
 import pandas as pd
@@ -9,14 +9,13 @@ import v20  # type: ignore
 from backtest import SignalConfig, backtest
 from core.config import (
     BACKTEST_COUNT,
-    BACKTEST_INTERVAL,
+    ENTRY_COLUMN,
+    EXIT_COLUMN,
     GRANULARITY,
-    OPTIMISTIC,
-    REFRESH_RATE,
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
 )
-from core.kernel import kernel
+from core.kernel import KernelConfig, kernel
 from reporting import report
 from exchange import (
     close_order,
@@ -41,7 +40,7 @@ class Record:
 
     def __init__(self, df: pd.DataFrame):
         """Initialize a Record object."""
-        self.ATR = df["ATR"].iloc[-1]
+        self.ATR = df["atr"].iloc[-1]
         self.take_profit = (
             df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
         )
@@ -61,11 +60,11 @@ class PerfTimer:
     def __enter__(self):
         """Start the timer."""
         self.start = datetime.now()
-        self.end = datetime.now()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Stop the timer."""
+        self.end = datetime.now()
         logger.info(f"run interval: {self.end - self.start}")
         logger.info("up time: %s", (self.end - self.app_start_time))
         logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
@@ -83,13 +82,17 @@ def bot_run(
     except Exception as err:
         return -1, err
 
-    kernel(
-        df,
-        wma_period=WMA_PERIOD,
-        optimistic=OPTIMISTIC,
+    kernel_conf = KernelConfig(
         signal_buy_column=signal_conf.signal_buy_column,
-        signal_exit_column=signal_conf.signal_exit_column,
         source_column=signal_conf.source_column,
+        entry_column=ENTRY_COLUMN,
+        exit_column=EXIT_COLUMN,
+        wma_period=WMA_PERIOD,
+    )
+    df = kernel(
+        df,
+        include_incomplete=False,
+        config=kernel_conf,
     )
     rec = Record(df)
 
@@ -100,21 +103,24 @@ def bot_run(
                 instrument,
                 amount,
                 take_profit=rec.take_profit,
-                trailing_distance=rec.ATR,
-                stop_loss=rec.wma,
             )
 
         except Exception as err:
             return -1, err
 
-    if rec.trigger != 1 and rec.signal == 0 and trade_id != -1:
+    if rec.trigger == -1 and trade_id != -1:
         try:
             close_order(ctx, trade_id)
         except Exception as err:
             return trade_id, err
 
+    if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
+        close_order(ctx, trade_id)
+        report(df, signal_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+        assert trade_id == -1, "trades should not be open"
+
     # print the results
-    report(df)
+    report(df, signal_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
 
     return trade_id, None
 
@@ -142,7 +148,7 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
-    last_backtest_time = datetime.now()
+    # signal_conf = SignalConfig("ha_ask_low", "ha_open")
     logger.info("starting bot.")
 
     ctx = OandaContext(
@@ -157,19 +163,34 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
                 sleep(5)
                 continue
 
-            run_end_time = datetime.now()
             logger.info(f"columns used: {signal_conf}")
             logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
 
-        # backtest if needed
-        if (
-            trade_id == -1
-            and (run_end_time - last_backtest_time).total_seconds() > BACKTEST_INTERVAL
-        ):
-            signal_conf = backtest(
-                instrument=instrument,
-                token=token,
-            )
-            last_backtest_time = datetime.now()
+            sleep_until_next_5_minute(trade_id=trade_id)
 
-        sleep(REFRESH_RATE)
+
+def roundUp(dt):
+    """Round a datetime object to the next 5 minute interval."""
+    # 0 => 4:55
+    # 1 => 4:55
+    # 2 => 4:55
+    # 3 => 4:55
+    # 4 => 4:55
+    # 5 => 9:55
+    # etc...
+    return (dt + timedelta(minutes=5 - dt.minute % 5)).replace(
+        second=0, microsecond=0
+    )
+
+
+def sleep_until_next_5_minute(trade_id: int = -1):
+    """Sleep until the next 5 minute interval."""
+    now = datetime.now()
+    next_time = roundUp(now) + timedelta(milliseconds=100)
+    if (next_time - now) < timedelta(seconds=1):
+        next_time = next_time + timedelta(minutes=5)
+    logger.info(
+        "sleeping until next 5 minute interval %s",
+        next_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+    )
+    sleep((next_time - now).total_seconds() + 0.1)

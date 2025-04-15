@@ -1,6 +1,6 @@
-# MutantStopBot
+# MutantMarketBot
 
-MutantStopBot is a bot to perform signal generation and backtesting using WMA on different charts.
+MutantMarketBot is a bot to perform signal generation and backtesting using WMA on different charts.
 
 ## NOTICE
 
@@ -31,7 +31,6 @@ Using MS SQL for model prediction
 
 ## TODO
 
-- [ ] fix weird wma signalling
 - [ ] dashboard to view current charts
 - [ ] integration testing with Oanda sandbox
 - [X] tune ATR

@@ -1,4 +1,6 @@
-import pandas as pd  # noqa: D100
+"""Functions for reporting trading results."""
+
+import pandas as pd
 import logging
 
 
@@ -7,6 +9,9 @@ logger = logging.getLogger("reporting")
 
 def report(
     df: pd.DataFrame,
+    signal_buy_column: str,
+    entry_column: str,
+    exit_column: str,
 ):
     """Print a report of the trading results.
 
@@ -14,28 +19,42 @@ def report(
     ----------
     df : pd.DataFrame
         The DataFrame containing the trading data.
+    signal_buy_column : str
+        The column name for the buy signal data.
+    entry_column : str
+        The column name for the entry price.
+    exit_column : str
+        The column name for the exit price.
 
     """
-    df_ticks = df[
+    df_ticks = df.reset_index()[
         [
+            "timestamp",
             "signal",
             "trigger",
             "atr",
             "wma",
-            # "open",
-            "entry_price",
-            "ask_open",
-            "bid_open",
+            signal_buy_column,
+            entry_column,
+            exit_column,
             "position_value",
             "exit_value",
             "running_total",
             "exit_total",
         ]
-    ].copy()
-    df_ticks.reset_index(inplace=True)
+    ]
+    df_ticks["timestamp"] = pd.to_datetime(df_ticks["timestamp"])
+    df_ticks["date"] = df_ticks["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    df_ticks.drop("timestamp", axis=1, inplace=True)
     df_orders = df_ticks.copy()
     df_orders = df_orders[df_orders["trigger"] != 0]
-    logger.info("last 2 trades")
-    logger.info(df_orders.tail(2).round(4).to_csv())
+    logger.info("recent trades")
+    logger.info(
+        "\n"
+        + df_orders.tail(12).round(4).to_string(index=False, header=True, justify="left")
+    )
     logger.debug("current status")
-    logger.debug(df_ticks.tail(6).round(4).to_csv())
+    logger.debug(
+        "\n"
+        + df_ticks.tail(6).round(4).to_string(index=False, header=True, justify="left")
+    )
