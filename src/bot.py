@@ -104,14 +104,19 @@ def bot_run(
         except Exception as err:
             return -1, err
 
-    if rec.trigger != 1 and rec.signal == 0 and trade_id != -1:
+    if rec.trigger == -1 and trade_id != -1:
         try:
             close_order(ctx, trade_id)
         except Exception as err:
             return trade_id, err
 
+    if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
+        close_order(ctx, trade_id)
+        assert trade_id == -1, "trades should not be open"
+
+
     # print the results
-    report(df)
+    report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
 
     return trade_id, None
 
