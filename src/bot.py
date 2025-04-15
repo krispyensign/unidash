@@ -96,8 +96,6 @@ def bot_run(
                 instrument,
                 amount,
                 take_profit=rec.take_profit,
-                trailing_distance=rec.ATR,
-                stop_loss=rec.wma,
             )
 
         except Exception as err:
