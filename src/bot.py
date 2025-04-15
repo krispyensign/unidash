@@ -148,7 +148,7 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
-    # signal_conf = SignalConfig("ha_ask_high", "bid_close")
+    # signal_conf = SignalConfig("ha_ask_low", "ha_open")
     logger.info("starting bot.")
 
     ctx = OandaContext(
@@ -179,18 +179,18 @@ def roundUp(dt):
     # 5 => 9:55
     # etc...
     return (dt + timedelta(minutes=5 - dt.minute % 5)).replace(
-        second=0, microsecond=10000
+        second=0, microsecond=0
     )
 
 
 def sleep_until_next_5_minute(trade_id: int = -1):
     """Sleep until the next 5 minute interval."""
     now = datetime.now()
-    next_time = roundUp(now)
+    next_time = roundUp(now) + timedelta(milliseconds=100)
     if (next_time - now) < timedelta(seconds=1):
         next_time = next_time + timedelta(minutes=5)
     logger.info(
         "sleeping until next 5 minute interval %s",
-        next_time.strftime("%Y-%m-%d %H:%M:%S"),
+        next_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
     )
-    sleep((next_time - now).total_seconds())
+    sleep((next_time - now).total_seconds() + 0.1)
