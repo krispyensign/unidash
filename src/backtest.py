@@ -7,11 +7,12 @@ import v20  # type: ignore
 from core.config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
+    EXIT_COLUMN,
     GRANULARITY,
     WMA_PERIOD,
     TAKE_PROFIT_MULTIPLIER,
 )
-from core.kernel import kernel
+from core.kernel import KernelConfig, kernel
 from exchange import (
     getOandaOHLC,
     OandaContext,
@@ -107,13 +108,18 @@ def backtest(instrument: str, token: str) -> SignalConfig:
     for source_column_name in SOURCE_COLUMNS:
         for signal_buy_column_name in SOURCE_COLUMNS:
             df = orig_df.copy()
-            kernel(
-                df,
-                source_column=source_column_name,
+            kernel_conf = KernelConfig(
                 signal_buy_column=signal_buy_column_name,
+                source_column=source_column_name,
                 wma_period=WMA_PERIOD,
                 take_profit_value=TAKE_PROFIT_MULTIPLIER,
                 entry_column=ENTRY_COLUMN,
+                exit_column=EXIT_COLUMN,
+            )
+            df = kernel(
+                df,
+                include_incomplete=False,
+                config=kernel_conf,
             )
 
             df_wins = len(df[(df["exit_value"] > 0) & (df["trigger"] == -1)])
@@ -157,7 +163,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
         round(max_exit_total, 5),
         round(best_df["exit_total"].min(), 5),
     )
-    report(best_df, best_max_conf.signal_buy_column)
+    report(best_df, best_max_conf.signal_buy_column, ENTRY_COLUMN)
 
     df_wins = len(
         not_worst_df[(not_worst_df["exit_value"] > 0) & (not_worst_df["trigger"] == -1)]
@@ -173,7 +179,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
         round(not_worst_df["exit_total"].iloc[-1], 5),
         round(not_worst_df["exit_total"].min(), 5),
     )
-    report(not_worst_df, not_worst_conf.signal_buy_column)
+    report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN)
 
     endTime = datetime.now()
     logger.info(f"run interval: {endTime - start_time}")

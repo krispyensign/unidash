@@ -10,11 +10,12 @@ from backtest import SignalConfig, backtest
 from core.config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
+    EXIT_COLUMN,
     GRANULARITY,
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
 )
-from core.kernel import kernel
+from core.kernel import KernelConfig, kernel
 from reporting import report
 from exchange import (
     close_order,
@@ -81,12 +82,17 @@ def bot_run(
     except Exception as err:
         return -1, err
 
-    kernel(
-        df,
-        wma_period=WMA_PERIOD,
+    kernel_conf = KernelConfig(
         signal_buy_column=signal_conf.signal_buy_column,
         source_column=signal_conf.source_column,
         entry_column=ENTRY_COLUMN,
+        exit_column=EXIT_COLUMN,
+        wma_period=WMA_PERIOD,
+    )
+    df = kernel(
+        df,
+        include_incomplete=False,
+        config=kernel_conf,
     )
     rec = Record(df)
 
@@ -110,11 +116,11 @@ def bot_run(
 
     if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
         close_order(ctx, trade_id)
-        report(df, signal_conf.signal_buy_column)
+        report(df, signal_conf.signal_buy_column, ENTRY_COLUMN)
         assert trade_id == -1, "trades should not be open"
 
     # print the results
-    report(df, signal_conf.signal_buy_column)
+    report(df, signal_conf.signal_buy_column, ENTRY_COLUMN)
 
     return trade_id, None
 
@@ -142,6 +148,7 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
+    # signal_conf = SignalConfig("ha_ask_high", "bid_close")
     logger.info("starting bot.")
 
     ctx = OandaContext(
@@ -171,22 +178,19 @@ def roundUp(dt):
     # 4 => 4:55
     # 5 => 9:55
     # etc...
-    return (dt + timedelta(minutes=5 - dt.minute % 5) - timedelta(minutes=1)).replace(
-        second=55, microsecond=0
+    return (dt + timedelta(minutes=5 - dt.minute % 5)).replace(
+        second=1, microsecond=0
     )
 
 
 def sleep_until_next_5_minute(trade_id: int = -1):
     """Sleep until the next 5 minute interval."""
     now = datetime.now()
-    if trade_id == -1:
-        next_time = roundUp(now)
-        if (next_time - now) < timedelta(seconds=1):
-            next_time = next_time + timedelta(minutes=5)
-        logger.info(
-            "sleeping until next 5 minute interval %s",
-            next_time.strftime("%Y-%m-%d %H:%M:%S"),
-        )
-        sleep((next_time - now).total_seconds())
-    else:
-        sleep(1)
+    next_time = roundUp(now)
+    if (next_time - now) < timedelta(seconds=1):
+        next_time = next_time + timedelta(minutes=5)
+    logger.info(
+        "sleeping until next 5 minute interval %s",
+        next_time.strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    sleep((next_time - now).total_seconds())

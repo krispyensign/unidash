@@ -10,6 +10,7 @@ logger = logging.getLogger("reporting")
 def report(
     df: pd.DataFrame,
     signal_buy_column: str,
+    entry_column: str,
 ):
     """Print a report of the trading results.
 
@@ -19,6 +20,8 @@ def report(
         The DataFrame containing the trading data.
     signal_buy_column : str
         The column name for the buy signal data.
+    entry_column : str
+        The column name for the entry price.
 
     """
     df_ticks = df.reset_index()[
@@ -29,8 +32,9 @@ def report(
             "atr",
             "wma",
             signal_buy_column,
-            "ask_open",
+            entry_column,
             "bid_open",
+            "ask_open",
             "position_value",
             "exit_value",
             "running_total",
@@ -45,7 +49,7 @@ def report(
     logger.info("recent trades")
     logger.info(
         "\n"
-        + df_orders.tail(2).round(4).to_string(index=False, header=True, justify="left")
+        + df_orders.tail(12).round(4).to_string(index=False, header=True, justify="left")
     )
     logger.debug("current status")
     logger.debug(

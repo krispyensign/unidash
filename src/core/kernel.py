@@ -1,5 +1,6 @@
 """Functions for processing and generating trading signals."""
 
+from dataclasses import dataclass
 import talib
 
 from core.chart import heikin_ashi
@@ -54,15 +55,23 @@ def wma_signals(
     df.loc[buy_selector, "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
+@dataclass
+class KernelConfig:
+    """A dataclass containing the configuration for the kernel."""
+
+    signal_buy_column: str
+    source_column: str
+    entry_column: str
+    exit_column: str
+    wma_period: int = 20
+    take_profit_value: float = 0
+
 
 def kernel(
     df: pd.DataFrame,
-    signal_buy_column: str = "open",
-    source_column: str = "bid_open",
-    entry_column: str = "ask_open",
-    wma_period: int = 20,
-    take_profit_value: float = 0,
-) -> None:
+    include_incomplete: bool,
+    config: KernelConfig,
+) -> pd.DataFrame:
     """Process a DataFrame containing trading data.
 
     This function processes a DataFrame containing trading data and generate trading signals
@@ -74,21 +83,27 @@ def kernel(
     ----------
     df : pd.DataFrame
         A DataFrame containing trading data.
-    signal_buy_column : str, optional
-        The column name for the buy signal data, by default "ha_low".
-    signal_exit_column : str, optional
-        The column name for the exit signal data, by default "ha_high".
-    source_column : str, optional
-        The column name for the source data, by default "bid_open".
-    entry_column : str, optional
-        The column name for the entry price, by default "ask_open".
-    wma_period : int, optional
-        The period for the weighted moving average, by default 20.
-    take_profit_value : float, optional
-        The take profit value as a multiplier of the atr, by default 0.
+    include_incomplete:
+        Whether to include the last candle in the output DataFrame.
+    config : KernelConfig
+        A dataclass containing the configuration for the kernel.
 
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the processed trading data.
 
     """
+    signal_buy_column = config.signal_buy_column
+    source_column = config.source_column
+    entry_column = config.entry_column
+    exit_column = config.exit_column
+    wma_period = config.wma_period
+    take_profit_value = config.take_profit_value
+
+    if not include_incomplete:
+        df = df.iloc[:-1].copy()
+
     # calculate the ATR for the trailing stop loss
     heikin_ashi(df)
     atr(df, wma_period)
@@ -106,12 +121,14 @@ def kernel(
     )
 
     # calculate the entry prices:
-    entry_price(df, entry_column=entry_column)
+    entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
     if take_profit_value > 0:
-        take_profit(df, take_profit_value, entry_column=entry_column)
+        take_profit(df, take_profit_value, entry_column=entry_column, exit_column=exit_column)
 
     # calculate the exit total
     exit_total(df)
+
+    return df
