@@ -1,4 +1,6 @@
-BACKTEST_INTERVAL = 288 * 5  # noqa: D100
+"""Configuration variables."""
+
+BACKTEST_INTERVAL = 288 * 5
 
 GRANULARITY = "M5"
 WMA_PERIOD = 20

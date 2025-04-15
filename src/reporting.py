@@ -1,4 +1,5 @@
-import pandas as pd  # noqa: D100
+"""Functions for reporting trading results."""
+import pandas as pd
 import logging
 
 
@@ -35,12 +36,18 @@ def report(
             "exit_total",
         ]
     ]
-    df_ticks['timestamp'] = pd.to_datetime(df_ticks['timestamp'])
-    df_ticks['date'] = df_ticks['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df_ticks["timestamp"] = pd.to_datetime(df_ticks["timestamp"])
+    df_ticks["date"] = df_ticks["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
     df_ticks.drop("timestamp", axis=1, inplace=True)
     df_orders = df_ticks.copy()
     df_orders = df_orders[df_orders["trigger"] != 0]
     logger.info("recent trades")
-    logger.info("\n" +df_orders.tail(2).round(4).to_string(index=False, header=True, justify="left"))
+    logger.info(
+        "\n"
+        + df_orders.tail(2).round(4).to_string(index=False, header=True, justify="left")
+    )
     logger.debug("current status")
-    logger.debug("\n" + df_ticks.tail(6).round(4).to_string(index=False, header=True, justify="left"))
+    logger.debug(
+        "\n"
+        + df_ticks.tail(6).round(4).to_string(index=False, header=True, justify="left")
+    )

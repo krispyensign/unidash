@@ -1,11 +1,13 @@
+"""Functions for processing and generating trading signals."""
+
 import talib
 
-from core.chart import heikin_ashi  # noqa: D100
+from core.chart import heikin_ashi
 from .calc import entry_price, exit_total, take_profit, atr
 import pandas as pd
 
 
-def wma_signals(  # noqa: PLR0913
+def wma_signals(
     df: pd.DataFrame,
     source_column: str = "open",
     signal_buy_column: str = "bid_low",
@@ -53,7 +55,7 @@ def wma_signals(  # noqa: PLR0913
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
-def kernel(  # noqa: PLR0913
+def kernel(
     df: pd.DataFrame,
     signal_buy_column: str = "open",
     source_column: str = "bid_open",

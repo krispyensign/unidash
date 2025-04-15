@@ -1,4 +1,6 @@
-import pandas as pd  # noqa: D100
+"""Functions for calculating trading signals."""
+
+import pandas as pd
 import numpy as np
 import talib
 

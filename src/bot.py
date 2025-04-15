@@ -114,7 +114,6 @@ def bot_run(
         report(df, signal_conf.signal_buy_column)
         assert trade_id == -1, "trades should not be open"
 
-
     # print the results
     report(df, signal_conf.signal_buy_column)
 

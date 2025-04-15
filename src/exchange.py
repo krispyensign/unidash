@@ -22,10 +22,8 @@ def getOandaBalance(ctx: OandaContext) -> float:
 
     Parameters
     ----------
-    ctx : v20.Context
+    ctx : OandaContext
         The Oanda API context.
-    account_id : str
-        The account ID associated with the Oanda account.
 
     Returns
     -------
@@ -42,16 +40,16 @@ def getOandaBalance(ctx: OandaContext) -> float:
 
 
 def getOandaOHLC(
-    ctx: OandaContext, instrment: str, granularity: str = "M5", count: int = 288
+    ctx: OandaContext, instrument: str, granularity: str = "M5", count: int = 288
 ) -> pd.DataFrame:
     # create dataframe with candles
     """Get OHLC data from Oanda and convert it into a pandas DataFrame.
 
     Parameters
     ----------
-    ctx : v20.Context
+    ctx : OandaContext
         The Oanda API context.
-    instrment : str
+    instrument : str
         The instrument to get the OHLC data for.
     granularity : str, optional
         The granularity of the OHLC data, by default "M5".
@@ -97,7 +95,7 @@ def getOandaOHLC(
     )
 
     resp = ctx.ctx.instrument.candles(
-        instrument=instrment,
+        instrument=instrument,
         granularity=granularity,
         price="MAB",
         count=count,
@@ -126,34 +124,24 @@ def getOandaOHLC(
     return df
 
 
-def place_order(  # noqa: PLR0913
+def place_order(
     ctx: OandaContext,
     instrument: str,
     amount: float,
     take_profit: float,
-    trailing_distance: float,
-    stop_loss: float,
 ) -> int:
     """Place an order on the Oanda API.
 
     Parameters
     ----------
-    ctx : v20.Context
+    ctx : OandaContext 
         The Oanda API context.
-    account_id : str
-        The account ID associated with the Oanda account.
     instrument : str
         The instrument to place the order on.
-    direction : str
-        The direction of the order, either "buy" or "sell".
     amount : float
         The amount of the instrument to buy or sell.
     take_profit : float
         The take profit price for the order.
-    stop_loss : float
-        The stop loss price for the order.
-    trailing_distance : float
-        The trailing distance for the order.
 
     Returns
     -------
@@ -210,10 +198,8 @@ def close_order(ctx: OandaContext, trade_id: int) -> None:
 
     Parameters
     ----------
-    ctx : v20.Context
+    ctx : OandaContext 
         The Oanda API context.
-    account_id : str
-        The account ID associated with the Oanda account.
     trade_id : str
         The trade ID of the order to close.
 
@@ -230,10 +216,8 @@ def get_open_trade(ctx: OandaContext) -> int:
 
     Parameters
     ----------
-    ctx : v20.Context
+    ctx : OandaContext
         The Oanda API context.
-    account_id : str
-        The account ID associated with the Oanda account.
 
     Returns
     -------
