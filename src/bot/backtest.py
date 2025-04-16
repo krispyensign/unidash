@@ -169,7 +169,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 logger.debug(
                     "heartbeat: %s found. %s%%",
                     total_found,
-                    round(count / column_pair_len, 3),
+                    100 * round(count / column_pair_len, 3),
                 )
 
             if stop_loss_multiplier >= take_profit_multiplier:
@@ -179,7 +179,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 signal_buy_column=signal_buy_column_name,
                 source_column=source_column_name,
                 wma_period=WMA_PERIOD,
-                take_profit_value=take_profit_multiplier,
+                take_profit=take_profit_multiplier,
                 entry_column=ENTRY_COLUMN,
                 exit_column=EXIT_COLUMN,
                 stop_loss=stop_loss_multiplier,

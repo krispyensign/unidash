@@ -51,8 +51,7 @@ def wma_signals(
     # F      F      X
 
     # check if the buy column is greater than the wma
-    buy_selector = df[signal_buy_column] > df["wma"]
-    df.loc[buy_selector, "signal"] = 1
+    df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
