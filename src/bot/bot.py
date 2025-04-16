@@ -110,6 +110,10 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
+    if signal_conf is None:
+        logger.error("no signals found.")
+        return
+
     logger.info("starting bot.")
 
     ctx = OandaContext(

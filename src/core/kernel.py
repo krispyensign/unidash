@@ -121,12 +121,18 @@ def kernel(
     # for internally managed take profits
     if config.take_profit > 0:
         take_profit(
-            df, config.take_profit, entry_column=config.entry_column, exit_column=config.exit_column
+            df,
+            config.take_profit,
+            entry_column=config.entry_column,
+            exit_column=config.exit_column,
         )
 
     if config.stop_loss > 0:
         trailing_stop_loss(
-            df, config.stop_loss, entry_column=config.entry_column, exit_column=config.exit_column
+            df,
+            config.stop_loss,
+            entry_column=config.entry_column,
+            exit_column=config.exit_column,
         )
 
     # calculate the exit total

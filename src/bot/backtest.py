@@ -107,7 +107,7 @@ class Record:
         return f"w:{self.wins} l:{self.losses}, q:{round(self.exit_total, 5)}, q_min:{round(self.min_exit_total, 5)}"
 
 
-def backtest(instrument: str, token: str) -> SignalConfig:
+def backtest(instrument: str, token: str) -> SignalConfig | None:
     """Run a backtest of the trading strategy.
 
     Parameters
@@ -230,7 +230,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 best_rec = rec
                 best_max_conf = signal_conf
                 best_df = df.copy()
-
+    
     logger.debug(
         "best max found %s %s",
         best_max_conf,
@@ -244,6 +244,10 @@ def backtest(instrument: str, token: str) -> SignalConfig:
         not_worst_rec,
     )
     report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+
+    if total_found == 0:
+        logger.error("no winning combinations found")
+        return None
 
     # choose the least worst combination to minimize loss
     if (not_worst_rec.wins - not_worst_rec.losses) > (best_rec.wins - best_rec.losses):
