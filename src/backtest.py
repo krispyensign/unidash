@@ -26,6 +26,8 @@ from reporting import report
 logger = logging.getLogger("backtest")
 APP_START_TIME = datetime.now()
 
+TP_MULTIPLIERS = [x / 2 for x in range(0, 7, 1)]
+TSL_MULTIPLIERS = [x / 2 for x in range(0, 3, 1)]
 SOURCE_COLUMNS = [
     "open",
     "high",
@@ -143,12 +145,15 @@ def backtest(instrument: str, token: str) -> SignalConfig:
     best_rec = Record(0, 0, 0, 0, -99.0, -99.0)
     not_worst_rec = Record(0, 0, 0, 0, -99.0, -99.0)
 
-    take_profit_multipliers = (x / 2 for x in range(0, 7, 1))
-    stop_loss_multipliers = (x / 2 for x in range(0, 7, 1))
     column_pairs = itertools.product(
-        SOURCE_COLUMNS, SOURCE_COLUMNS, take_profit_multipliers, stop_loss_multipliers
+        SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, TSL_MULTIPLIERS
     )
-    column_pair_len = len(SOURCE_COLUMNS) * len(SOURCE_COLUMNS) * 8 * 8
+    column_pair_len = (
+        len(SOURCE_COLUMNS)
+        * len(SOURCE_COLUMNS)
+        * len(TP_MULTIPLIERS)
+        * len(TSL_MULTIPLIERS)
+    )
     logger.info(f"total_combinations: {column_pair_len}")
     count = -1
     total_found = 0
