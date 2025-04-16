@@ -27,6 +27,9 @@ def exit_total(df: pd.DataFrame) -> None:
     df["exit_value"] = df["position_value"] * np.where(df["trigger"] == -1, 1, 0)
     df["exit_total"] = df["exit_value"].cumsum()
     df["running_total"] = df["exit_total"] + (df["position_value"] * df["signal"])
+    df["wins"] = np.where(df["exit_value"] > 0, 1, 0).cumsum()
+    df["losses"] = np.where(df["exit_value"] < 0, 1, 0).cumsum()
+    df["min_exit_total"] = df["exit_total"].cummin()
 
 
 def take_profit(
@@ -58,7 +61,43 @@ def take_profit(
     is then re-calculated.
 
     """
-    df.loc[(df["position_value"] > (df["atr"] * take_profit)), "signal"] = 0
+    df["take_profit"] = df["atr"] * take_profit
+    df.loc[df["position_value"] > df["take_profit"], "signal"] = 0
+    df["trigger"] = df["signal"].diff().fillna(0).astype(int)
+    entry_price(df, entry_column=entry_column, exit_column=exit_column)
+
+
+def trailing_stop_loss(
+    df: pd.DataFrame, stop_loss: float, entry_column: str, exit_column: str
+) -> None:
+    """Apply a trailing stop loss strategy to the trading data.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the trading data.
+    stop_loss : float
+        The stop loss value as a multiplier of the atr.
+    entry_column : str
+        The column name for the entry price.
+    exit_column : str
+        The column name for the exit price.
+
+    Returns
+    -------
+    pd.Dataframe
+        The DataFrame with the 'signal' and 'trigger' columns updated.
+
+    Notes
+    -----
+    The 'signal' column is set to 0 where the 'value' column is greater than the 'atr'
+    column times the stop loss value. The 'trigger' column is set to the difference
+    between the 'signal' and the previous value of the 'signal' column. The entry_price
+    is then re-calculated.
+
+    """
+    df["stop_loss"] = df["atr"] * stop_loss
+    df.loc[df["position_value"] < df["stop_loss"], "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
     entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
