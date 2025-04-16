@@ -1,16 +1,17 @@
 """Backtest the trading strategy."""
 
+from dataclasses import dataclass
 from datetime import datetime
+import itertools
 import pandas as pd
 import v20  # type: ignore
 
-from core.config import (
+from config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
     EXIT_COLUMN,
     GRANULARITY,
     WMA_PERIOD,
-    TAKE_PROFIT_MULTIPLIER,
 )
 from core.kernel import KernelConfig, kernel
 from exchange import (
@@ -23,7 +24,10 @@ import logging
 from reporting import report
 
 logger = logging.getLogger("backtest")
+APP_START_TIME = datetime.now()
 
+TP_MULTIPLIERS = [x / 2 for x in range(0, 7, 1)]
+TSL_MULTIPLIERS = [x / 2 for x in range(0, 3, 1)]
 SOURCE_COLUMNS = [
     "open",
     "high",
@@ -52,17 +56,55 @@ SOURCE_COLUMNS = [
 ]
 
 
+class PerfTimer:
+    """PerfTimer class."""
+
+    def __init__(self, app_start_time: datetime):
+        """Initialize a PerfTimer object."""
+        self.app_start_time = app_start_time
+        pass
+
+    def __enter__(self):
+        """Start the timer."""
+        self.start = datetime.now()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Stop the timer."""
+        self.end = datetime.now()
+        logger.info(f"run interval: {self.end - self.start}")
+        logger.info("up time: %s", (self.end - self.app_start_time))
+        logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
+
+
+@dataclass
 class SignalConfig:
     """SignalConfig class."""
 
-    def __init__(self, source_column: str, signal_buy_column: str):
-        """Initialize a SignalConfig object."""
-        self.source_column = source_column
-        self.signal_buy_column = signal_buy_column
+    source_column: str
+    signal_buy_column: str
+    trailing_stop: float
+    take_profit: float
 
     def __str__(self):
         """Return a string representation of the SignalConfig object."""
-        return f"so:{self.source_column}, sib:{self.signal_buy_column}"
+        return f"so:{self.source_column}, sib:{self.signal_buy_column}, ts:{self.trailing_stop}, tp:{self.take_profit}"
+
+
+@dataclass
+class Record:
+    """Record class."""
+
+    signal: int
+    trigger: int
+    losses: int
+    wins: int
+    exit_total: float
+    min_exit_total: float
+
+    def __str__(self) -> str:
+        """Return a string representation of the Record object."""
+        return f"w:{self.wins} l:{self.losses}, q:{round(self.exit_total, 5)}, q_min:{round(self.min_exit_total, 5)}"
 
 
 def backtest(instrument: str, token: str) -> SignalConfig:
@@ -85,110 +127,126 @@ def backtest(instrument: str, token: str) -> SignalConfig:
     logger.info("starting backtest")
     start_time = datetime.now()
     ctx = OandaContext(
-        v20.Context("api-fxpractice.oanda.com", token=token), None, token
+        v20.Context("api-fxpractice.oanda.com", token=token), None, token, instrument
     )
 
-    orig_df = getOandaOHLC(
-        ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY
-    )
+    orig_df = getOandaOHLC(ctx, count=BACKTEST_COUNT, granularity=GRANULARITY)
     logger.info(
         "count: %s granularity: %s wma_period: %s",
         BACKTEST_COUNT,
         GRANULARITY,
         WMA_PERIOD,
     )
-    max_exit_total = -99.0
-    max_min_exit_total = -99.0
-    best_max_conf = SignalConfig("", "")
-    not_worst_conf = SignalConfig("", "")
+
+    best_max_conf = SignalConfig("", "", 0.0, 0.0)
+    not_worst_conf = SignalConfig("", "", 0.0, 0.0)
     best_df = pd.DataFrame()
     not_worst_df = pd.DataFrame()
-    total_combinations = len(SOURCE_COLUMNS) * len(SOURCE_COLUMNS)
-    logger.info(f"total_combinations: {total_combinations}")
-    for source_column_name in SOURCE_COLUMNS:
-        for signal_buy_column_name in SOURCE_COLUMNS:
-            df = orig_df.copy()
+    best_rec = Record(0, 0, 0, 0, -99.0, -99.0)
+    not_worst_rec = Record(0, 0, 0, 0, -99.0, -99.0)
+
+    column_pairs = itertools.product(
+        SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, TSL_MULTIPLIERS
+    )
+    column_pair_len = (
+        len(SOURCE_COLUMNS)
+        * len(SOURCE_COLUMNS)
+        * len(TP_MULTIPLIERS)
+        * len(TSL_MULTIPLIERS)
+    )
+    logger.info(f"total_combinations: {column_pair_len}")
+    count = -1
+    total_found = 0
+    with PerfTimer(start_time):
+        for (
+            source_column_name,
+            signal_buy_column_name,
+            take_profit_multiplier,
+            stop_loss_multiplier,
+        ) in column_pairs:
+            count += 1
+            if count % 1000 == 0:
+                logger.debug(
+                    "heartbeat: %s found. %s%%",
+                    total_found,
+                    round(count / column_pair_len, 3),
+                )
+
+            if stop_loss_multiplier >= take_profit_multiplier:
+                continue
+
             kernel_conf = KernelConfig(
                 signal_buy_column=signal_buy_column_name,
                 source_column=source_column_name,
                 wma_period=WMA_PERIOD,
-                take_profit_value=TAKE_PROFIT_MULTIPLIER,
+                take_profit_value=take_profit_multiplier,
                 entry_column=ENTRY_COLUMN,
                 exit_column=EXIT_COLUMN,
+                stop_loss=stop_loss_multiplier,
             )
             df = kernel(
-                df,
+                orig_df.copy(),
                 include_incomplete=False,
                 config=kernel_conf,
             )
 
-            df_wins = len(df[(df["exit_value"] > 0) & (df["trigger"] == -1)])
-            df_losses = len(df[(df["exit_value"] < 0) & (df["trigger"] == -1)])
-            if df_losses > df_wins:
-                continue
+            signal_conf = SignalConfig(
+                source_column_name,
+                signal_buy_column_name,
+                stop_loss_multiplier,
+                take_profit_multiplier,
+            )
 
-            exit_total = df["exit_total"].iloc[-1]
-            min_exit_total = df["exit_total"].min()
-            if min_exit_total > max_min_exit_total:
+            rec = Record(
+                signal=df["signal"].iloc[-1],
+                trigger=df["trigger"].iloc[-1],
+                losses=df["losses"].iloc[-1],
+                wins=df["wins"].iloc[-1],
+                exit_total=df["exit_total"].iloc[-1],
+                min_exit_total=df["min_exit_total"].iloc[-1],
+            )
+
+            if rec.losses >= rec.wins:
+                continue
+            else:
+                total_found += 1
+
+            if rec.min_exit_total > not_worst_rec.min_exit_total:
                 logger.debug(
-                    "new min found q:%s so:%s sib:%s",
-                    round(min_exit_total, 5),
-                    source_column_name,
-                    signal_buy_column_name,
+                    "new min found %s %s",
+                    rec,
+                    signal_conf,
                 )
-                max_min_exit_total = min_exit_total
-                not_worst_conf = SignalConfig(
-                    source_column_name, signal_buy_column_name
-                )
+                not_worst_rec = rec
+                not_worst_conf = signal_conf
                 not_worst_df = df.copy()
 
-            if exit_total > max_exit_total:
+            if rec.exit_total > best_rec.exit_total:
                 logger.debug(
-                    "new max found q:%s so:%s sib:%s",
-                    round(exit_total, 5),
-                    source_column_name,
-                    signal_buy_column_name,
+                    "new max found %s %s",
+                    rec,
+                    signal_conf,
                 )
-                max_exit_total = exit_total
-                best_max_conf = SignalConfig(source_column_name, signal_buy_column_name)
+                best_rec = rec
+                best_max_conf = signal_conf
                 best_df = df.copy()
 
-    df_wins = len(best_df[(best_df["exit_value"] > 0) & (best_df["trigger"] == -1)])
-    df_losses = len(best_df[(best_df["exit_value"] < 0) & (best_df["trigger"] == -1)])
     logger.debug(
-        "best max found %s w:%s l:%s q_max:%s q_min:%s",
+        "best max found %s %s",
         best_max_conf,
-        df_wins,
-        df_losses,
-        round(max_exit_total, 5),
-        round(best_df["exit_total"].min(), 5),
+        best_rec,
     )
     report(best_df, best_max_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
-    best_wins = df_wins - df_losses
 
-    df_wins = len(
-        not_worst_df[(not_worst_df["exit_value"] > 0) & (not_worst_df["trigger"] == -1)]
-    )
-    df_losses = len(
-        not_worst_df[(not_worst_df["exit_value"] < 0) & (not_worst_df["trigger"] == -1)]
-    )
     logger.debug(
-        "not worst found %s w:%s l:%s q_max:%s q_min:%s",
+        "not worst found %s %s",
         not_worst_conf,
-        df_wins,
-        df_losses,
-        round(not_worst_df["exit_total"].iloc[-1], 5),
-        round(not_worst_df["exit_total"].min(), 5),
+        not_worst_rec,
     )
     report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
-    not_worst_wins = df_wins - df_losses
-
-    endTime = datetime.now()
-    logger.info(f"run interval: {endTime - start_time}")
-    logger.debug("start time: %s", start_time.strftime("%Y-%m-%d %H:%M:%S"))
 
     # choose the least worst combination to minimize loss
-    if not_worst_wins >= best_wins:
+    if (not_worst_rec.wins - not_worst_rec.losses) > (best_rec.wins - best_rec.losses):
         logger.info("best min selected")
         return not_worst_conf
 

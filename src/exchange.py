@@ -10,11 +10,14 @@ logger = logging.getLogger("exchange")
 class OandaContext:
     """OandaContext class."""
 
-    def __init__(self, ctx: v20.Context, account_id: str | None, token: str):
+    def __init__(
+        self, ctx: v20.Context, account_id: str | None, token: str, instrument: str
+    ):
         """Initialize a OandaContext object."""
         self.ctx = ctx
         self.account_id = account_id if account_id is not None else ""
         self.token = token
+        self.instrument = instrument
 
 
 def getOandaBalance(ctx: OandaContext) -> float:
@@ -40,7 +43,7 @@ def getOandaBalance(ctx: OandaContext) -> float:
 
 
 def getOandaOHLC(
-    ctx: OandaContext, instrument: str, granularity: str = "M5", count: int = 288
+    ctx: OandaContext, granularity: str = "M5", count: int = 288
 ) -> pd.DataFrame:
     # create dataframe with candles
     """Get OHLC data from Oanda and convert it into a pandas DataFrame.
@@ -95,7 +98,7 @@ def getOandaOHLC(
     )
 
     resp = ctx.ctx.instrument.candles(
-        instrument=instrument,
+        instrument=ctx.instrument,
         granularity=granularity,
         price="MAB",
         count=count,
@@ -126,10 +129,9 @@ def getOandaOHLC(
 
 def place_order(
     ctx: OandaContext,
-    instrument: str,
     amount: float,
-    take_profit: float,
-    trailing_distance: float,
+    take_profit: float = 0.0,
+    trailing_distance: float = 0.0,
 ) -> int:
     """Place an order on the Oanda API.
 
@@ -154,22 +156,25 @@ def place_order(
     """
     # place the order
     decimals = 5
-    if instrument.split("_")[1] == "JPY":
+    if ctx.instrument.split("_")[1] == "JPY":
         decimals = 3
 
     order: v20.order.MarketOrder = v20.order.MarketOrder(
-        instrument=instrument,
+        instrument=ctx.instrument,
         units=amount,
-        takeProfitOnFill=v20.transaction.TakeProfitDetails(
-            price=f"{round(take_profit, decimals)}"
-        ),
-        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
-            distance=f"{round(trailing_distance, decimals)}",
-        ),
-        # stopLossOnFill=v20.transaction.StopLossDetails(
-        #     price=f"{round(stop_loss, decimals)}"
-        # ),
     )
+    if take_profit > 0.0:
+        takeProfitOnFill = v20.transaction.TakeProfitDetails(
+            price=f"{round(take_profit, decimals)}"
+        )
+        order.takeProfitOnFill = takeProfitOnFill
+
+    if trailing_distance > 0.0:
+        trailingStopLossOnFill = v20.transaction.TrailingStopLossDetails(
+            distance=f"{round(trailing_distance, decimals)}"
+        )
+        order.trailingStopLossOnFill = trailingStopLossOnFill
+
     logger.info(order.json())
     resp: v20.response.Response = ctx.ctx.order.create(
         ctx.account_id,
@@ -200,8 +205,12 @@ def place_order(
 
 
 def replace_order(
-    ctx: OandaContext, trade_id: int, take_profit: float, trailing_distance: float
-):
+    ctx: OandaContext,
+    trade_id: int,
+    amount: float,
+    take_profit: float = 0.0,
+    trailing_distance: float = 0.0,
+) -> int:
     """Replace an order on the Oanda API.
 
     Parameters
@@ -210,6 +219,8 @@ def replace_order(
         The Oanda API context.
     trade_id : int
         The trade ID of the order to replace.
+    amount : float
+        The amount of the instrument to buy or sell.
     take_profit : float
         The take profit price for the order.
     trailing_distance : float
@@ -221,14 +232,26 @@ def replace_order(
         The order ID of the replaced order.
 
     """
+    # place the order
+    decimals = 5
+    if ctx.instrument.split("_")[1] == "JPY":
+        decimals = 3
+
     order: v20.order.MarketOrder = v20.order.MarketOrder(
-        takeProfitOnFill=v20.transaction.TakeProfitDetails(
-            price=f"{round(take_profit, 5)}"
-        ),
-        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
-            distance=f"{round(trailing_distance, 5)}"
-        ),
+        instrument=ctx.instrument,
+        units=amount,
     )
+
+    if take_profit > 0.0:
+        takeProfitOnFill = v20.transaction.TakeProfitDetails(
+            price=f"{round(take_profit, decimals)}"
+        )
+        order.takeProfitOnFill = takeProfitOnFill
+    if trailing_distance > 0.0:
+        trailingStopLossOnFill = v20.transaction.TrailingStopLossDetails(
+            distance=f"{round(trailing_distance, decimals)}"
+        )
+        order.trailingStopLossOnFill = trailingStopLossOnFill
     resp: v20.response.Response = ctx.ctx.order.replace(
         ctx.account_id,
         orderSpecifier=trade_id,

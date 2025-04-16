@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import talib
 
 from core.chart import heikin_ashi
-from .calc import entry_price, exit_total, take_profit, atr
+from core.calc import entry_price, exit_total, take_profit, atr, trailing_stop_loss
 import pandas as pd
 
 
@@ -66,6 +66,7 @@ class KernelConfig:
     exit_column: str
     wma_period: int = 20
     take_profit_value: float = 0
+    stop_loss: float = 0
 
 
 def kernel(
@@ -101,6 +102,7 @@ def kernel(
     exit_column = config.exit_column
     wma_period = config.wma_period
     take_profit_value = config.take_profit_value
+    stop_loss_value = config.stop_loss
 
     if not include_incomplete:
         df = df.iloc[:-1].copy()
@@ -129,6 +131,11 @@ def kernel(
     if take_profit_value > 0:
         take_profit(
             df, take_profit_value, entry_column=entry_column, exit_column=exit_column
+        )
+
+    if stop_loss_value > 0:
+        trailing_stop_loss(
+            df, stop_loss_value, entry_column=entry_column, exit_column=exit_column
         )
 
     # calculate the exit total

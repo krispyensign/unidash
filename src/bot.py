@@ -3,18 +3,15 @@
 from datetime import datetime, timedelta
 import logging
 from time import sleep
-import pandas as pd
 import v20  # type: ignore
 
-from backtest import SignalConfig, backtest
-from core.config import (
+from backtest import PerfTimer, Record, SignalConfig, backtest
+from config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
     EXIT_COLUMN,
     GRANULARITY,
-    TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
-    TRAILING_STOP_LOSS_MULTIPLIER,
 )
 from core.kernel import KernelConfig, kernel
 from reporting import report
@@ -24,65 +21,19 @@ from exchange import (
     getOandaOHLC,
     place_order,
     OandaContext,
-    replace_order,
 )
 
 logger = logging.getLogger("bot")
 APP_START_TIME = datetime.now()
 
 
-class Record:
-    """Record class."""
-
-    ATR: float
-    take_profit: float
-    trailing_distance: float
-    wma: float
-    signal: int
-    trigger: int
-
-    def __init__(self, df: pd.DataFrame):
-        """Initialize a Record object."""
-        self.ATR = df["atr"].iloc[-1]
-        self.trailing_distance = self.ATR * TRAILING_STOP_LOSS_MULTIPLIER
-        self.take_profit = (
-            df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
-        )
-        self.wma = df["wma"].iloc[-1]
-        self.signal = df["signal"].iloc[-1]
-        self.trigger = df["trigger"].iloc[-1]
-
-
-class PerfTimer:
-    """PerfTimer class."""
-
-    def __init__(self, app_start_time: datetime):
-        """Initialize a PerfTimer object."""
-        self.app_start_time = app_start_time
-        pass
-
-    def __enter__(self):
-        """Start the timer."""
-        self.start = datetime.now()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Stop the timer."""
-        self.end = datetime.now()
-        logger.info(f"run interval: {self.end - self.start}")
-        logger.info("up time: %s", (self.end - self.app_start_time))
-        logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
-
-
 def bot_run(
-    ctx: OandaContext, signal_conf: SignalConfig, instrument: str, amount: float
+    ctx: OandaContext, signal_conf: SignalConfig, amount: float
 ) -> tuple[int, Exception | None]:
     """Run the bot."""
     try:
         trade_id = get_open_trade(ctx)
-        df = getOandaOHLC(
-            ctx, instrument, count=BACKTEST_COUNT, granularity=GRANULARITY
-        )
+        df = getOandaOHLC(ctx, count=BACKTEST_COUNT, granularity=GRANULARITY)
     except Exception as err:
         return -1, err
 
@@ -92,37 +43,32 @@ def bot_run(
         entry_column=ENTRY_COLUMN,
         exit_column=EXIT_COLUMN,
         wma_period=WMA_PERIOD,
+        stop_loss=signal_conf.trailing_stop,
+        take_profit_value=signal_conf.take_profit,
     )
     df = kernel(
         df,
         include_incomplete=False,
         config=kernel_conf,
     )
-    rec = Record(df)
+    rec = Record(
+        signal=df["signal"].iloc[-1],
+        trigger=df["trigger"].iloc[-1],
+        losses=df["losses"].iloc[-1],
+        wins=df["wins"].iloc[-1],
+        exit_total=df["exit_total"].iloc[-1],
+        min_exit_total=df["min_exit_total"].iloc[-1],
+    )
 
     if rec.trigger == 1 and trade_id == -1:
         try:
             trade_id = place_order(
                 ctx,
-                instrument,
                 amount,
-                take_profit=rec.take_profit,
-                trailing_distance=rec.trailing_distance,
             )
 
         except Exception as err:
             return -1, err
-
-    if rec.trigger == 0 and rec.signal == 1 and trade_id != -1:
-        try:
-            trade_id = replace_order(
-                ctx,
-                trade_id,
-                take_profit=rec.take_profit,
-                trailing_distance=rec.trailing_distance,
-            )
-        except Exception as err:
-            return trade_id, err
 
     if rec.trigger == -1 and trade_id != -1:
         try:
@@ -167,12 +113,15 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
     logger.info("starting bot.")
 
     ctx = OandaContext(
-        v20.Context("api-fxpractice.oanda.com", token=token), account_id, token
+        ctx=v20.Context("api-fxpractice.oanda.com", token=token),
+        account_id=account_id,
+        token=token,
+        instrument=instrument,
     )
 
     while True:
         with PerfTimer(APP_START_TIME):
-            trade_id, err = bot_run(ctx, signal_conf, instrument, amount)
+            trade_id, err = bot_run(ctx, signal_conf, amount)
             if err is not None:
                 logger.error(err)
                 sleep(5)
