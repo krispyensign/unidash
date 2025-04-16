@@ -12,7 +12,7 @@ dependencies = [
     "pandas",
     "numpy",
     "ta-lib",
-    "pyyaml"
+    "pyyaml",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -27,7 +27,6 @@ dev = [
     "mypy",
     "python-lsp-server",
     "types-requests",
-    "alive-progress",
     "ruff",
     'pandas-stubs',
 ]

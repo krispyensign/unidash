@@ -4,17 +4,19 @@ MutantMarketBot is a bot to perform signal generation and backtesting using WMA 
 
 ## NOTICE
 
-This bot is being revised.
-
 This is a homegrown application and does not replace perfectly valid trading
 solutions already available. DO NOT USE WITHOUT FIRST TESTING YOURSELF.
 
 This application is provided "AS IS" for educational purposes only.
 
-## Current interim steps
+## Quickstart steps
 
 ```shell
-cd src/py
+# install ta-lib
+wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
+sudo apt install -y ./ta-lib_0.6.4_amd64.deb
+
+# install everything else
 pip install '.[dev]'
 
 # i.e. for bot mode

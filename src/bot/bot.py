@@ -5,8 +5,8 @@ import logging
 from time import sleep
 import v20  # type: ignore
 
-from backtest import PerfTimer, Record, SignalConfig, backtest
-from config import (
+from bot.backtest import PerfTimer, Record, SignalConfig, backtest
+from bot.config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
     EXIT_COLUMN,
@@ -14,8 +14,8 @@ from config import (
     WMA_PERIOD,
 )
 from core.kernel import KernelConfig, kernel
-from reporting import report
-from exchange import (
+from bot.reporting import report
+from bot.exchange import (
     close_order,
     get_open_trade,
     getOandaOHLC,
@@ -44,7 +44,7 @@ def bot_run(
         exit_column=EXIT_COLUMN,
         wma_period=WMA_PERIOD,
         stop_loss=signal_conf.trailing_stop,
-        take_profit_value=signal_conf.take_profit,
+        take_profit=signal_conf.take_profit,
     )
     df = kernel(
         df,
@@ -110,6 +110,10 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
+    if signal_conf is None:
+        logger.error("no signals found.")
+        return
+
     logger.info("starting bot.")
 
     ctx = OandaContext(

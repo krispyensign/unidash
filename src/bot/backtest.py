@@ -6,7 +6,7 @@ import itertools
 import pandas as pd
 import v20  # type: ignore
 
-from config import (
+from bot.config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
     EXIT_COLUMN,
@@ -14,14 +14,14 @@ from config import (
     WMA_PERIOD,
 )
 from core.kernel import KernelConfig, kernel
-from exchange import (
+from bot.exchange import (
     getOandaOHLC,
     OandaContext,
 )
 
 import logging
 
-from reporting import report
+from bot.reporting import report
 
 logger = logging.getLogger("backtest")
 APP_START_TIME = datetime.now()
@@ -107,7 +107,7 @@ class Record:
         return f"w:{self.wins} l:{self.losses}, q:{round(self.exit_total, 5)}, q_min:{round(self.min_exit_total, 5)}"
 
 
-def backtest(instrument: str, token: str) -> SignalConfig:
+def backtest(instrument: str, token: str) -> SignalConfig | None:
     """Run a backtest of the trading strategy.
 
     Parameters
@@ -169,7 +169,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 logger.debug(
                     "heartbeat: %s found. %s%%",
                     total_found,
-                    round(count / column_pair_len, 3),
+                    100 * round(count / column_pair_len, 3),
                 )
 
             if stop_loss_multiplier >= take_profit_multiplier:
@@ -179,7 +179,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 signal_buy_column=signal_buy_column_name,
                 source_column=source_column_name,
                 wma_period=WMA_PERIOD,
-                take_profit_value=take_profit_multiplier,
+                take_profit=take_profit_multiplier,
                 entry_column=ENTRY_COLUMN,
                 exit_column=EXIT_COLUMN,
                 stop_loss=stop_loss_multiplier,
@@ -230,7 +230,7 @@ def backtest(instrument: str, token: str) -> SignalConfig:
                 best_rec = rec
                 best_max_conf = signal_conf
                 best_df = df.copy()
-
+    
     logger.debug(
         "best max found %s %s",
         best_max_conf,
@@ -244,6 +244,10 @@ def backtest(instrument: str, token: str) -> SignalConfig:
         not_worst_rec,
     )
     report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+
+    if total_found == 0:
+        logger.error("no winning combinations found")
+        return None
 
     # choose the least worst combination to minimize loss
     if (not_worst_rec.wins - not_worst_rec.losses) > (best_rec.wins - best_rec.losses):
