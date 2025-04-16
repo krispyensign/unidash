@@ -14,6 +14,7 @@ from core.config import (
     GRANULARITY,
     TAKE_PROFIT_MULTIPLIER,
     WMA_PERIOD,
+    TRAILING_STOP_LOSS_MULTIPLIER,
 )
 from core.kernel import KernelConfig, kernel
 from reporting import report
@@ -23,6 +24,7 @@ from exchange import (
     getOandaOHLC,
     place_order,
     OandaContext,
+    replace_order,
 )
 
 logger = logging.getLogger("bot")
@@ -34,6 +36,7 @@ class Record:
 
     ATR: float
     take_profit: float
+    trailing_distance: float
     wma: float
     signal: int
     trigger: int
@@ -41,6 +44,7 @@ class Record:
     def __init__(self, df: pd.DataFrame):
         """Initialize a Record object."""
         self.ATR = df["atr"].iloc[-1]
+        self.trailing_distance = self.ATR * TRAILING_STOP_LOSS_MULTIPLIER
         self.take_profit = (
             df["entry_price"].iloc[-1] + df["atr"].iloc[-1] * TAKE_PROFIT_MULTIPLIER
         )
@@ -103,10 +107,22 @@ def bot_run(
                 instrument,
                 amount,
                 take_profit=rec.take_profit,
+                trailing_distance=rec.trailing_distance,
             )
 
         except Exception as err:
             return -1, err
+
+    if rec.trigger == 0 and rec.signal == 1 and trade_id != -1:
+        try:
+            trade_id = replace_order(
+                ctx,
+                trade_id,
+                take_profit=rec.take_profit,
+                trailing_distance=rec.trailing_distance,
+            )
+        except Exception as err:
+            return trade_id, err
 
     if rec.trigger == -1 and trade_id != -1:
         try:
@@ -148,7 +164,6 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         instrument=instrument,
         token=token,
     )
-    # signal_conf = SignalConfig("ha_ask_low", "ha_open")
     logger.info("starting bot.")
 
     ctx = OandaContext(
@@ -171,26 +186,17 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
 
 def roundUp(dt):
     """Round a datetime object to the next 5 minute interval."""
-    # 0 => 4:55
-    # 1 => 4:55
-    # 2 => 4:55
-    # 3 => 4:55
-    # 4 => 4:55
-    # 5 => 9:55
-    # etc...
-    return (dt + timedelta(minutes=5 - dt.minute % 5)).replace(
-        second=0, microsecond=0
-    )
+    return (dt + timedelta(minutes=5 - dt.minute % 5)).replace(second=1, microsecond=0)
 
 
 def sleep_until_next_5_minute(trade_id: int = -1):
     """Sleep until the next 5 minute interval."""
     now = datetime.now()
-    next_time = roundUp(now) + timedelta(milliseconds=100)
+    next_time = roundUp(now)
     if (next_time - now) < timedelta(seconds=1):
         next_time = next_time + timedelta(minutes=5)
     logger.info(
         "sleeping until next 5 minute interval %s",
         next_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
     )
-    sleep((next_time - now).total_seconds() + 0.1)
+    sleep((next_time - now).total_seconds())
