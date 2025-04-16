@@ -1,5 +1,6 @@
 """Functions for reporting trading results."""
 
+from datetime import timedelta
 import pandas as pd
 import logging
 
@@ -44,14 +45,18 @@ def report(
         ]
     ]
     df_ticks["timestamp"] = pd.to_datetime(df_ticks["timestamp"])
-    df_ticks["date"] = df_ticks["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    df_ticks["completed_datetime"] = (
+        (timedelta(minutes=5) + df_ticks["timestamp"]).dt
+    ).strftime("%Y-%m-%d %H:%M:%S")
     df_ticks.drop("timestamp", axis=1, inplace=True)
     df_orders = df_ticks.copy()
     df_orders = df_orders[df_orders["trigger"] != 0]
     logger.info("recent trades")
     logger.info(
         "\n"
-        + df_orders.tail(12).round(4).to_string(index=False, header=True, justify="left")
+        + df_orders.tail(12)
+        .round(4)
+        .to_string(index=False, header=True, justify="left")
     )
     logger.debug("current status")
     logger.debug(

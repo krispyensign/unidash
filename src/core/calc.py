@@ -29,7 +29,9 @@ def exit_total(df: pd.DataFrame) -> None:
     df["running_total"] = df["exit_total"] + (df["position_value"] * df["signal"])
 
 
-def take_profit(df: pd.DataFrame, take_profit: float, entry_column: str, exit_column: str) -> None:
+def take_profit(
+    df: pd.DataFrame, take_profit: float, entry_column: str, exit_column: str
+) -> None:
     """Apply a take profit strategy to the trading data.
 
     Parameters

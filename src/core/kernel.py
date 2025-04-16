@@ -55,6 +55,7 @@ def wma_signals(
     df.loc[buy_selector, "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
+
 @dataclass
 class KernelConfig:
     """A dataclass containing the configuration for the kernel."""
@@ -126,7 +127,9 @@ def kernel(
     # recalculate the entry prices after a take profit
     # for internally managed take profits
     if take_profit_value > 0:
-        take_profit(df, take_profit_value, entry_column=entry_column, exit_column=exit_column)
+        take_profit(
+            df, take_profit_value, entry_column=entry_column, exit_column=exit_column
+        )
 
     # calculate the exit total
     exit_total(df)

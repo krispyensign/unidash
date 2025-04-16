@@ -33,9 +33,7 @@ Using MS SQL for model prediction
 
 - [ ] dashboard to view current charts
 - [ ] integration testing with Oanda sandbox
-- [X] tune ATR
 - [ ] save OHLC and results to ms sql using sqlalchemy
-- [X] remove all unused typescript code
 - [ ] asp.net service to periodically perform tasks
 - [ ] embed python kernel pipeline(s) in ms sql
 - [ ] perform backtests using ms sql

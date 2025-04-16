@@ -129,6 +129,7 @@ def place_order(
     instrument: str,
     amount: float,
     take_profit: float,
+    trailing_distance: float,
 ) -> int:
     """Place an order on the Oanda API.
 
@@ -142,6 +143,8 @@ def place_order(
         The amount of the instrument to buy or sell.
     take_profit : float
         The take profit price for the order.
+    trailing_distance : float
+        The trailing distance for the order.
 
     Returns
     -------
@@ -160,21 +163,82 @@ def place_order(
         takeProfitOnFill=v20.transaction.TakeProfitDetails(
             price=f"{round(take_profit, decimals)}"
         ),
-        # trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
-        #     distance=f"{round(trailing_distance + 0.01, decimals)}",
-        # ),
+        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
+            distance=f"{round(trailing_distance, decimals)}",
+        ),
         # stopLossOnFill=v20.transaction.StopLossDetails(
         #     price=f"{round(stop_loss, decimals)}"
         # ),
     )
     logger.info(order.json())
-    resp = ctx.ctx.order.create(
+    resp: v20.response.Response = ctx.ctx.order.create(
         ctx.account_id,
         order=order,
     )
 
+    if resp.body is None:
+        raise Exception("No response body")
+
     # get the trade id from the response body and return it if it exists
     trade_id: int
+    if resp.body is not None and "orderFillTransaction" in resp.body:
+        result: v20.transaction.OrderFillTransaction = resp.body["orderFillTransaction"]
+        trade: v20.trade.TradeOpen = result.tradeOpened
+        trade_id = trade.tradeID
+    else:
+        if resp.body is not None and "orderRejectTransaction" in resp.body:
+            reject_result: v20.transaction.MarketOrderRejectTransaction = resp.body[
+                "orderRejectTransaction"
+            ]
+            logger.error(reject_result.summary())
+            logger.error(reject_result.json())
+            raise Exception(reject_result.reason)
+
+        raise Exception(resp.body.__str__())
+
+    return trade_id
+
+
+def replace_order(
+    ctx: OandaContext, trade_id: int, take_profit: float, trailing_distance: float
+):
+    """Replace an order on the Oanda API.
+
+    Parameters
+    ----------
+    ctx : OandaContext
+        The Oanda API context.
+    trade_id : int
+        The trade ID of the order to replace.
+    take_profit : float
+        The take profit price for the order.
+    trailing_distance : float
+        The trailing distance for the order.
+
+    Returns
+    -------
+    int
+        The order ID of the replaced order.
+
+    """
+    order: v20.order.MarketOrder = v20.order.MarketOrder(
+        takeProfitOnFill=v20.transaction.TakeProfitDetails(
+            price=f"{round(take_profit, 5)}"
+        ),
+        trailingStopLossOnFill=v20.transaction.TrailingStopLossDetails(
+            distance=f"{round(trailing_distance, 5)}"
+        ),
+    )
+    resp: v20.response.Response = ctx.ctx.order.replace(
+        ctx.account_id,
+        orderSpecifier=trade_id,
+        order=order,
+    )
+
+    if resp.body is None:
+        raise Exception("No response body")
+
+    # get the trade id from the response body and return it if it exists
     if resp.body is not None and "orderFillTransaction" in resp.body:
         result: v20.transaction.OrderFillTransaction = resp.body["orderFillTransaction"]
         trade: v20.trade.TradeOpen = result.tradeOpened
