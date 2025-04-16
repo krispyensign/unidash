@@ -6,7 +6,7 @@ import itertools
 import pandas as pd
 import v20  # type: ignore
 
-from config import (
+from bot.config import (
     BACKTEST_COUNT,
     ENTRY_COLUMN,
     EXIT_COLUMN,
@@ -14,14 +14,14 @@ from config import (
     WMA_PERIOD,
 )
 from core.kernel import KernelConfig, kernel
-from exchange import (
+from bot.exchange import (
     getOandaOHLC,
     OandaContext,
 )
 
 import logging
 
-from reporting import report
+from bot.reporting import report
 
 logger = logging.getLogger("backtest")
 APP_START_TIME = datetime.now()

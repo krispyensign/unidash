@@ -3,8 +3,8 @@
 import logging
 import sys
 
-from backtest import backtest
-from bot import bot
+from bot.backtest import backtest
+from bot.bot import bot
 
 logging.root.handlers = []
 

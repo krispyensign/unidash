@@ -65,7 +65,7 @@ class KernelConfig:
     entry_column: str
     exit_column: str
     wma_period: int = 20
-    take_profit_value: float = 0
+    take_profit: float = 0
     stop_loss: float = 0
 
 
@@ -96,20 +96,12 @@ def kernel(
         A DataFrame containing the processed trading data.
 
     """
-    signal_buy_column = config.signal_buy_column
-    source_column = config.source_column
-    entry_column = config.entry_column
-    exit_column = config.exit_column
-    wma_period = config.wma_period
-    take_profit_value = config.take_profit_value
-    stop_loss_value = config.stop_loss
-
     if not include_incomplete:
         df = df.iloc[:-1].copy()
 
     # calculate the ATR for the trailing stop loss
     heikin_ashi(df)
-    atr(df, wma_period)
+    atr(df, config.wma_period)
 
     # signal using the close prices
     # signal and trigger interval could appears as this:
@@ -118,24 +110,24 @@ def kernel(
     # NOTE: usage of close prices differs online than in offline trading
     wma_signals(
         df,
-        signal_buy_column=signal_buy_column,
-        wma_period=wma_period,
-        source_column=source_column,
+        signal_buy_column=config.signal_buy_column,
+        wma_period=config.wma_period,
+        source_column=config.source_column,
     )
 
     # calculate the entry prices:
-    entry_price(df, entry_column=entry_column, exit_column=exit_column)
+    entry_price(df, entry_column=config.entry_column, exit_column=config.exit_column)
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
-    if take_profit_value > 0:
+    if config.take_profit > 0:
         take_profit(
-            df, take_profit_value, entry_column=entry_column, exit_column=exit_column
+            df, config.take_profit, entry_column=config.entry_column, exit_column=config.exit_column
         )
 
-    if stop_loss_value > 0:
+    if config.stop_loss > 0:
         trailing_stop_loss(
-            df, stop_loss_value, entry_column=entry_column, exit_column=exit_column
+            df, config.stop_loss, entry_column=config.entry_column, exit_column=config.exit_column
         )
 
     # calculate the exit total
