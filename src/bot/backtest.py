@@ -29,9 +29,10 @@ APP_START_TIME = datetime.now()
 class PerfTimer:
     """PerfTimer class."""
 
-    def __init__(self, app_start_time: datetime):
+    def __init__(self, app_start_time: datetime, logger: logging.Logger):
         """Initialize a PerfTimer object."""
         self.app_start_time = app_start_time
+        self.logger = logger
         pass
 
     def __enter__(self):
@@ -42,9 +43,9 @@ class PerfTimer:
     def __exit__(self, exc_type, exc_value, traceback):
         """Stop the timer."""
         self.end = datetime.now()
-        logger.info(f"run interval: {self.end - self.start}")
-        logger.info("up time: %s", (self.end - self.app_start_time))
-        logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
+        self.logger.info(f"run interval: {self.end - self.start}")
+        self.logger.info("up time: %s", (self.end - self.app_start_time))
+        self.logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 @dataclass
@@ -143,7 +144,7 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
     )
     logger.info(f"total_combinations: {column_pair_len}")
     total_found = 0
-    with PerfTimer(start_time):
+    with PerfTimer(start_time, logger):
         for (
             source_column_name,
             signal_buy_column_name,
@@ -228,6 +229,7 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
         not_worst_conf.signal_exit_column,
     )
 
+    logger.info("total_found: %s", total_found)
     if total_found == 0:
         logger.error("no winning combinations found")
         return None
