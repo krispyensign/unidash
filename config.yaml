@@ -12,4 +12,4 @@ signal_config:
   signal_buy_column: ha_open
   signal_exit_column: bid_low
   take_profit: 0.75
-  trailing_stop: 0.0
+  stop_loss: 0.0

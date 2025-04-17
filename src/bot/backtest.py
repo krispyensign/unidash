@@ -55,12 +55,12 @@ class SignalConfig:
     source_column: str
     signal_buy_column: str
     signal_exit_column: str
-    trailing_stop: float
+    stop_loss: float
     take_profit: float
 
     def __str__(self):
         """Return a string representation of the SignalConfig object."""
-        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, ts:{self.trailing_stop}, tp:{self.take_profit}"
+        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, ts:{self.stop_loss}, tp:{self.take_profit}"
 
 
 @dataclass

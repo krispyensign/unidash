@@ -45,7 +45,7 @@ def bot_run(
         signal_exit_column=signal_conf.signal_exit_column,
         source_column=signal_conf.source_column,
         wma_period=chart_conf.wma_period,
-        stop_loss=signal_conf.trailing_stop,
+        stop_loss=signal_conf.stop_loss,
         take_profit=signal_conf.take_profit,
     )
     df = kernel(
