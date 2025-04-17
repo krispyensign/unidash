@@ -1,22 +1,34 @@
 """Functions for calculating trading signals."""
 
+from typing import Any
 import pandas as pd
 import numpy as np
+from numpy.typing import NDArray
 import talib
+from numba import jit  # type: ignore
 
 
-def exit_total(df: pd.DataFrame) -> None:
+@jit(nopython=True)
+def exit_total(
+    position_value: NDArray[np.float64],
+    trigger: NDArray[np.uint8],
+    signal: NDArray[np.uint8],
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.uint8], NDArray[np.uint8], NDArray[np.float64]]:
     """Calculate the cumulative total of all trades and the running total of the portfolio.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        The DataFrame containing the trading data.
+    position_value : NDArray[np.float64]
+        The position value array.
+    trigger : NDArray[np.uint8]
+        The trigger array.
+    signal : NDArray[np.uint8]
+        The signal array.
 
     Returns
     -------
-    pd.Dataframe
-        The DataFrame with the 'exit_total' and 'running_total' columns added.
+    tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.uint8], NDArray[np.uint8], NDArray[np.float64]]
+        The exit value, exit total, running total, wins, losses, and min exit total.
 
     Notes
     -----
@@ -24,12 +36,14 @@ def exit_total(df: pd.DataFrame) -> None:
     is the cumulative total of the portfolio, including the current trade.
 
     """
-    df["exit_value"] = df["position_value"] * ((df["trigger"] == -1).astype(int))
-    df["exit_total"] = df["exit_value"].cumsum()
-    df["running_total"] = df["exit_total"] + (df["position_value"] * df["signal"])
-    df["wins"] = (df["exit_value"] > 0).astype(int).cumsum()
-    df["losses"] = (df["exit_value"] < 0).astype(int).cumsum()
-    df["min_exit_total"] = df["exit_total"].expanding().min()
+    exit_value: NDArray[np.float64] = position_value * (np.where(trigger == -1, 1, 0))
+    exit_total: NDArray[np.float64] = exit_value.cumsum()
+    running_total: NDArray[np.float64] = exit_total + (position_value * signal)
+    wins: NDArray[np.uint8] = np.where(exit_value > 0, 1, 0).cumsum()    
+    losses: NDArray[np.uint8] = np.where(exit_value < 0, 1, 0).cumsum()
+    min_exit_total = exit_total.min()
+
+    return exit_value, exit_total, running_total, wins, losses, min_exit_total
 
 
 def take_profit(
@@ -64,7 +78,11 @@ def take_profit(
     df["take_profit"] = df["atr"] * take_profit
     df.loc[df["position_value"] > df["take_profit"], "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-    entry_price(df, entry_column=entry_column, exit_column=exit_column)
+    df["trigger"], df["entry_price"], df["position_value"] = entry_price(
+        df["signal"].to_numpy(dtype=np.int8),
+        df[entry_column].to_numpy(),
+        df[exit_column].to_numpy(),
+    )
 
 
 def stop_loss(
@@ -99,45 +117,58 @@ def stop_loss(
     df["stop_loss"] = df["atr"] * stop_loss
     df.loc[df["position_value"] < df["stop_loss"], "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-    entry_price(df, entry_column=entry_column, exit_column=exit_column)
+    df["trigger"], df["entry_price"], df["position_value"] = entry_price(
+        df["signal"].to_numpy(dtype=np.int8),
+        df[entry_column].to_numpy(),
+        df[exit_column].to_numpy(),
+    )
 
 
-def entry_price(df: pd.DataFrame, entry_column: str, exit_column: str) -> None:
-    """Calculate the entry price for a given trading signal.
-
-    When the trigger is 1, use the ask_open price (buy signal), so when the trigger is -1, it means
-    the buy signal is no longer valid, and the bid_open price at this point would be the same as
-    the bid_close price at the previous point (where the signal was 1) since the closing price is
-    trailing we can use the bid_open in the immediate next row.
+@jit(nopython=True)
+def entry_price(
+    signal: NDArray[np.int8],
+    entry_column: NDArray[np.float64],
+    exit_column: NDArray[np.float64],
+) -> tuple[NDArray[np.int8], NDArray[np.float64], NDArray[np.float64]]:
+    """Calculate the entry price for a given signal.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        The DataFrame containing the trading data.
-    entry_column : str
-        The column name for the entry price.
-    exit_column : str
-        The column name for the exit price.
+    signal : NDArray[np.uint8]
+        The signal array.
+    entry_column : NDArray[np.float64]
+        The entry column array.
+    exit_column : NDArray[np.float64]
+        The exit column array.
 
     Returns
     -------
-    pd.Dataframe
-        The DataFrame with the 'internal_bit_mask', 'entry_price', and 'position_value' columns updated.
-
-    Notes
-    -----
-    The 'internal_bit_mask' column is set to the bit-wise OR of the 'signal' and 'trigger'
-    columns. The 'entry_price' column is set to the 'ask_high' column when the 'trigger'
-    column is 1, and the 'value' column is set to the difference between the 'bid_open'
-    and 'entry_price' columns times the 'internal_bit_mask' column.
+    tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.float64]]
+        The trigger, entry price, and position value arrays.
 
     """
-    df["internal_bit_mask"] = df["signal"] | abs(df["trigger"])
-    df["entry_price"] = np.where(df["trigger"] == 1, df[entry_column], np.nan)
-    df["entry_price"] = df["entry_price"].ffill() * df["internal_bit_mask"]
-    df["position_value"] = (df[exit_column] - df["entry_price"]) * df[
-        "internal_bit_mask"
-    ]
+    trigger: NDArray[np.int8] = np.append(0, np.diff(signal))
+    internal_bit_mask: NDArray[np.int8] = np.bitwise_or(signal, np.abs(trigger))
+    price: NDArray[np.float64] = np.where(trigger == 1, entry_column, np.nan)
+    price = ffill(price) * internal_bit_mask
+    price = np.where(np.isnan(price), 0, price)
+    position_value: NDArray[np.float64] = (
+        exit_column - price
+    ) * internal_bit_mask
+
+    return trigger, price, position_value
+
+
+@jit(nopython=True)
+def ffill(signal: NDArray[Any]) -> NDArray[Any]:
+    """Fill missing values in a numpy array with the previous value."""
+    for i in range(1, len(signal)):
+        if np.isnan(signal[i]):
+            for j in range(i - 1, 0, -1):
+                if not np.isnan(signal[j]):
+                    signal[i] = signal[j]
+                    break
+    return signal
 
 
 def atr(df: pd.DataFrame, wma_period: int) -> None:

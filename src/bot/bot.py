@@ -6,7 +6,7 @@ import logging
 from time import sleep
 import v20  # type: ignore
 
-from bot.backtest import ChartConfig, PerfTimer, Record, SignalConfig
+from bot.backtest import ChartConfig, PerfTimer, Record
 from core.kernel import KernelConfig, kernel
 from bot.reporting import report
 from bot.exchange import (
@@ -29,7 +29,7 @@ class TradeConfig:
 
 
 def bot_run(
-    ctx: OandaContext, signal_conf: SignalConfig, chart_conf: ChartConfig, amount: float
+    ctx: OandaContext, signal_conf: KernelConfig, chart_conf: ChartConfig, amount: float
 ) -> tuple[int, Exception | None]:
     """Run the bot."""
     try:
@@ -40,27 +40,12 @@ def bot_run(
     except Exception as err:
         return -1, err
 
-    kernel_conf = KernelConfig(
-        signal_buy_column=signal_conf.signal_buy_column,
-        signal_exit_column=signal_conf.signal_exit_column,
-        source_column=signal_conf.source_column,
-        wma_period=chart_conf.wma_period,
-        stop_loss=signal_conf.stop_loss,
-        take_profit=signal_conf.take_profit,
-    )
+    signal_conf.wma_period = chart_conf.wma_period
     df = kernel(
         df,
-        include_incomplete=False,
-        config=kernel_conf,
+        config=signal_conf,
     )
-    rec = Record(
-        signal=df["signal"].iloc[-1],
-        trigger=df["trigger"].iloc[-1],
-        losses=df["losses"].iloc[-1],
-        wins=df["wins"].iloc[-1],
-        exit_total=df["exit_total"].iloc[-1],
-        min_exit_total=df["min_exit_total"].iloc[-1],
-    )
+    rec = Record(df)
 
     if rec.trigger == 1 and trade_id == -1:
         try:
@@ -93,7 +78,7 @@ def bot(
     token: str,
     account_id: str,
     chart_conf: ChartConfig,
-    signal_conf: SignalConfig,
+    signal_conf: KernelConfig,
     trade_conf: TradeConfig,
 ) -> None:
     """Bot that trades on Oanda.

@@ -39,6 +39,7 @@ def report(
             signal_exit_column,
             ENTRY_COLUMN,
             EXIT_COLUMN,
+            "entry_price",
             "position_value",
             "exit_value",
             "running_total",

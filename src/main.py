@@ -5,8 +5,12 @@ import sys
 
 import yaml
 
-from bot.backtest import ChartConfig, SignalConfig, backtest
+from bot.backtest import ChartConfig, backtest
 from bot.bot import TradeConfig, bot
+import cProfile
+import pstats
+
+from core.kernel import KernelConfig
 
 logging.root.handlers = []
 
@@ -29,7 +33,17 @@ if __name__ == "__main__":
         chart_conf = ChartConfig(**conf["chart_config"])
         token = sys.argv[2]
 
-        result = backtest(chart_conf, token=token)
+        profiler = cProfile.Profile()
+        profiler.enable()
+        try:
+            result = backtest(chart_conf, token=token)
+        except KeyboardInterrupt:
+            profiler.disable()
+            stats = pstats.Stats(profiler)
+            stats.sort_stats("cumtime")
+            stats.print_stats(100)
+            sys.exit(0)
+
         logger.info(result)
         if result is None:
             sys.exit(1)
@@ -39,7 +53,7 @@ if __name__ == "__main__":
         account_id = sys.argv[3]
         conf = yaml.safe_load(open(sys.argv[4]))
         chart_conf = ChartConfig(**conf["chart_config"])
-        signal_conf = SignalConfig(**conf["signal_config"])
+        signal_conf = KernelConfig(**conf["signal_config"])
         trade_conf = TradeConfig(**conf["trade_config"])
         bot(
             token=token,

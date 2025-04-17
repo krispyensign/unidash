@@ -1,6 +1,7 @@
 """Functions for processing and generating trading signals."""
 
 from dataclasses import dataclass
+import numpy as np
 import talib
 import pandas as pd
 
@@ -15,13 +16,16 @@ EXIT_COLUMN = "bid_close"
 class KernelConfig:
     """A dataclass containing the configuration for the kernel."""
 
-    signal_buy_column: str
-    signal_exit_column: str
-    source_column: str
-    wma_period: int = 20
+    wma_period: int
+    signal_buy_column: str = ""
+    signal_exit_column: str = ""
+    source_column: str = ""
     take_profit: float = 0
     stop_loss: float = 0
 
+    def __str__(self):
+        """Return a string representation of the SignalConfig object."""
+        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, sl:{self.stop_loss}, tp:{self.take_profit}"
 
 def wma_signals(
     df: pd.DataFrame,
@@ -75,12 +79,9 @@ def wma_signals(
         # check if the exit column is less than the wma
         df.loc[df[signal_exit_column] < df["wma"], "signal"] = 0
 
-    df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-
 
 def kernel(
     df: pd.DataFrame,
-    include_incomplete: bool,
     config: KernelConfig,
 ) -> pd.DataFrame:
     """Process a DataFrame containing trading data.
@@ -105,8 +106,7 @@ def kernel(
         A DataFrame containing the processed trading data.
 
     """
-    if not include_incomplete:
-        df = df.iloc[:-1].copy()
+    df = df.iloc[:-1].copy()
 
     # calculate the ATR for the trailing stop loss
     heikin_ashi(df)
@@ -126,7 +126,15 @@ def kernel(
     )
 
     # calculate the entry prices:
-    entry_price(df, entry_column=ENTRY_COLUMN, exit_column=EXIT_COLUMN)
+    df["trigger"], df["entry_price"], df["position_value"] = entry_price(
+        df["signal"].to_numpy(dtype=np.int8),
+        df[ENTRY_COLUMN].to_numpy(),
+        df[EXIT_COLUMN].to_numpy(),
+    )
+    # assert df["trigger"].isna().sum() == 0, f"trigger nan count {df['trigger'].isna().sum()}"
+    # assert df["entry_price"].isna().sum() == 0, f"entry_price value is NaN {df['entry_price'].isna().sum()}"
+    # assert df["position_value"].isna().sum() == 0, "Position value is NaN"
+    
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
@@ -147,6 +155,16 @@ def kernel(
         )
 
     # calculate the exit total
-    exit_total(df)
+    ev, et, running_total, wins, losses, min_exit_total = exit_total(
+        df["position_value"].to_numpy(),
+        df["trigger"].to_numpy(),
+        df["signal"].to_numpy(),
+    )
+    df["exit_value"] = ev
+    df["exit_total"] = et
+    df["running_total"] = running_total
+    df["wins"] = wins
+    df["losses"] = losses
+    df["min_exit_total"] = min_exit_total
 
     return df

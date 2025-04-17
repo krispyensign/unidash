@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 import itertools
+from alive_progress import alive_it  # type: ignore
 import pandas as pd
 import v20  # type: ignore
-from alive_progress import alive_it  # type: ignore
 
 from bot.constants import (
     SOURCE_COLUMNS,
@@ -48,22 +48,6 @@ class PerfTimer:
         self.logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
 
 
-@dataclass
-class SignalConfig:
-    """SignalConfig class."""
-
-    source_column: str
-    signal_buy_column: str
-    signal_exit_column: str
-    stop_loss: float
-    take_profit: float
-
-    def __str__(self):
-        """Return a string representation of the SignalConfig object."""
-        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, sl:{self.stop_loss}, tp:{self.take_profit}"
-
-
-@dataclass
 class Record:
     """Record class."""
 
@@ -73,6 +57,23 @@ class Record:
     wins: int
     exit_total: float
     min_exit_total: float
+
+    def __init__(self, df: pd.DataFrame | None = None):
+        """Initialize a Record object."""
+        if df is None:
+            self.signal = 0
+            self.trigger = 0
+            self.losses = 0
+            self.wins = 0
+            self.exit_total = -999999
+            self.min_exit_total = -999999
+        else:
+            self.signal = df["signal"].iloc[-1]
+            self.trigger = df["trigger"].iloc[-1]
+            self.losses = df["losses"].iloc[-1]
+            self.wins = df["wins"].iloc[-1]
+            self.exit_total = df["exit_total"].iloc[-1]
+            self.min_exit_total = df["min_exit_total"].iloc[-1]
 
     def __str__(self) -> str:
         """Return a string representation of the Record object."""
@@ -89,7 +90,7 @@ class ChartConfig:
     candle_count: int
 
 
-def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
+def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
     """Run a backtest of the trading strategy.
 
     Parameters
@@ -115,7 +116,7 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
         chart_config.instrument,
     )
 
-    orig_df = getOandaOHLC(
+    df_orig = getOandaOHLC(
         ctx, count=chart_config.candle_count, granularity=chart_config.granularity
     )
     logger.info(
@@ -125,12 +126,12 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
         chart_config.wma_period,
     )
 
-    best_max_conf = SignalConfig("", "", "", 0.0, 0.0)
-    not_worst_conf = SignalConfig("", "", "", 0.0, 0.0)
+    best_max_conf = KernelConfig(wma_period=chart_config.wma_period)
+    not_worst_conf = KernelConfig(wma_period=chart_config.wma_period)
     best_df = pd.DataFrame()
     not_worst_df = pd.DataFrame()
-    best_rec = Record(0, 0, 0, 0, -99.0, -99.0)
-    not_worst_rec = Record(0, 0, 0, 0, -99.0, -99.0)
+    best_rec = Record()
+    not_worst_rec = Record()
 
     column_pairs = itertools.product(
         SOURCE_COLUMNS, SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, SL_MULTIPLIERS
@@ -144,6 +145,8 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
     )
     logger.info(f"total_combinations: {column_pair_len}")
     total_found = 0
+    misses = 0
+    # count = 0
     with PerfTimer(start_time, logger):
         for (
             source_column_name,
@@ -152,46 +155,35 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
             take_profit_multiplier,
             stop_loss_multiplier,
         ) in alive_it(column_pairs, total=column_pair_len):
+            # count += 1
+            # if count % 1000 == 0:
+            #     logger.info("progress: %d%%", round(100 * (count / column_pair_len), 4))
             if stop_loss_multiplier > take_profit_multiplier:
                 continue
 
-            kernel_conf = KernelConfig(
+            signal_conf = KernelConfig(
+                wma_period=chart_config.wma_period,
+                source_column=source_column_name,
                 signal_buy_column=signal_buy_column_name,
                 signal_exit_column=signal_exit_column_name,
-                source_column=source_column_name,
-                wma_period=chart_config.wma_period,
-                take_profit=take_profit_multiplier,
                 stop_loss=stop_loss_multiplier,
+                take_profit=take_profit_multiplier,
             )
             df = kernel(
-                orig_df.copy(),
-                include_incomplete=False,
-                config=kernel_conf,
+                df_orig,
+                config=signal_conf,
             )
 
-            signal_conf = SignalConfig(
-                source_column_name,
-                signal_buy_column_name,
-                signal_exit_column_name,
-                stop_loss_multiplier,
-                take_profit_multiplier,
-            )
-
-            rec = Record(
-                signal=df["signal"].iloc[-1],
-                trigger=df["trigger"].iloc[-1],
-                losses=df["losses"].iloc[-1],
-                wins=df["wins"].iloc[-1],
-                exit_total=df["exit_total"].iloc[-1],
-                min_exit_total=df["min_exit_total"].iloc[-1],
-            )
+            rec = Record(df)
 
             if rec.losses >= rec.wins:
+                misses += 1
                 continue
             else:
                 total_found += 1
 
             if rec.min_exit_total > not_worst_rec.min_exit_total:
+                logger.info("found: %s misses: %s", total_found, misses)
                 logger.debug(
                     "new min found %s %s",
                     rec,
@@ -202,6 +194,7 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
                 not_worst_df = df.copy()
 
             if rec.exit_total > best_rec.exit_total:
+                logger.info("found: %s misses: %s", total_found, misses)
                 logger.debug(
                     "new max found %s %s",
                     rec,
@@ -229,7 +222,7 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
         not_worst_conf.signal_exit_column,
     )
 
-    logger.info("total_found: %s", total_found)
+    logger.info("found: %s misses: %s", total_found, misses)
     if total_found == 0:
         logger.error("no winning combinations found")
         return None
@@ -241,3 +234,4 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
 
     logger.info("best max selected")
     return best_max_conf
+
