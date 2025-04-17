@@ -10,7 +10,7 @@ from alive_progress import alive_it  # type: ignore
 from bot.constants import (
     SOURCE_COLUMNS,
     TP_MULTIPLIERS,
-    TSL_MULTIPLIERS,
+    SL_MULTIPLIERS,
 )
 from core.kernel import KernelConfig, kernel
 from bot.exchange import (
@@ -60,7 +60,7 @@ class SignalConfig:
 
     def __str__(self):
         """Return a string representation of the SignalConfig object."""
-        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, ts:{self.stop_loss}, tp:{self.take_profit}"
+        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, sl:{self.stop_loss}, tp:{self.take_profit}"
 
 
 @dataclass
@@ -133,14 +133,14 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
     not_worst_rec = Record(0, 0, 0, 0, -99.0, -99.0)
 
     column_pairs = itertools.product(
-        SOURCE_COLUMNS, SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, TSL_MULTIPLIERS
+        SOURCE_COLUMNS, SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, SL_MULTIPLIERS
     )
     column_pair_len = (
         len(SOURCE_COLUMNS)
         * len(SOURCE_COLUMNS)
         * len(SOURCE_COLUMNS)
         * len(TP_MULTIPLIERS)
-        * len(TSL_MULTIPLIERS)
+        * len(SL_MULTIPLIERS)
     )
     logger.info(f"total_combinations: {column_pair_len}")
     total_found = 0

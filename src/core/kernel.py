@@ -2,10 +2,10 @@
 
 from dataclasses import dataclass
 import talib
+import pandas as pd
 
 from core.chart import heikin_ashi
-from core.calc import entry_price, exit_total, take_profit, atr, trailing_stop_loss
-import pandas as pd
+from core.calc import entry_price, exit_total, take_profit, atr, stop_loss as sl
 
 ENTRY_COLUMN = "ask_close"
 EXIT_COLUMN = "bid_close"
@@ -70,12 +70,12 @@ def wma_signals(
 
     # check if the buy column is greater than the wma
     df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
-    df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
     if signal_buy_column != signal_exit_column:
         # check if the exit column is less than the wma
         df.loc[df[signal_exit_column] < df["wma"], "signal"] = 0
-        df["trigger"] = df["signal"].diff().fillna(0).astype(int)
+
+    df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
 def kernel(
@@ -139,7 +139,7 @@ def kernel(
         )
 
     if config.stop_loss > 0:
-        trailing_stop_loss(
+        sl(
             df,
             config.stop_loss,
             entry_column=ENTRY_COLUMN,

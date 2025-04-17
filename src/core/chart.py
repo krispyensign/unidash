@@ -2,6 +2,28 @@
 
 import typing
 import pandas as pd
+import numpy as np
+from numba import jit  # type: ignore
+from typing import Any
+from numpy.typing import NDArray
+
+
+@jit(nopython=True)
+def heiken_ashi_numpy(
+    c_open: NDArray[Any],
+    c_high: NDArray[Any],
+    c_low: NDArray[Any],
+    c_close: NDArray[Any],
+) -> tuple[NDArray[Any], NDArray[Any], NDArray[Any], NDArray[Any]]:
+    """Generate Heikin Ashi candlesticks for a given numpy arrays."""
+    ha_close = (c_open + c_high + c_low + c_close) / 4
+    ha_open = np.empty_like(ha_close)
+    ha_open[0] = (c_open[0] + c_close[0]) / 2
+    for i in range(1, len(c_close)):
+        ha_open[i] = (c_open[i - 1] + c_close[i - 1]) / 2
+    ha_high = np.maximum(np.maximum(ha_open, ha_close), c_high)
+    ha_low = np.minimum(np.minimum(ha_open, ha_close), c_low)
+    return ha_open, ha_high, ha_low, ha_close
 
 
 def heikin_ashi(df: pd.DataFrame) -> None:
@@ -38,21 +60,26 @@ def heikin_ashi(df: pd.DataFrame) -> None:
         df["ask_open"] + df["ask_high"] + df["ask_low"] + df["ask_close"]
     ) / 4
 
-    df.at[0, "ha_open"] = df.at[0, "open"]
+    df["ha_open"] = df["open"].copy()
+    ha_open_values = np.zeros(len(df))
+    ha_open_values[0] = df.at[0, "open"]
     for i in range(1, len(df)):
-        df.at[i, "ha_open"] = (df.at[i - 1, "ha_open"] + df.at[i - 1, "ha_close"]) / 2
+        ha_open_values[i] = (ha_open_values[i - 1] + df.at[i - 1, "ha_close"]) / 2
+    df["ha_open"] = ha_open_values
 
-    df.at[0, "ha_bid_open"] = df.at[0, "bid_open"]
+    df["ha_bid_open"] = df["bid_open"].copy()
+    ha_open_values = np.zeros(len(df))
+    ha_open_values[0] = df.at[0, "bid_open"]
     for i in range(1, len(df)):
-        df.at[i, "ha_bid_open"] = (
-            df.at[i - 1, "ha_bid_open"] + df.at[i - 1, "ha_bid_close"]
-        ) / 2
+        ha_open_values[i] = (ha_open_values[i - 1] + df.at[i - 1, "ha_bid_close"]) / 2
+    df["ha_bid_open"] = ha_open_values
 
-    df.at[0, "ha_ask_open"] = df.at[0, "ask_open"]
+    df["ha_ask_open"] = df["ask_open"].copy()
+    ha_open_values = np.zeros(len(df))
+    ha_open_values[0] = df.at[0, "ask_open"]
     for i in range(1, len(df)):
-        df.at[i, "ha_ask_open"] = (
-            df.at[i - 1, "ha_ask_open"] + df.at[i - 1, "ha_ask_close"]
-        ) / 2
+        ha_open_values[i] = (ha_open_values[i - 1] + df.at[i - 1, "ha_ask_close"]) / 2
+    df["ha_ask_open"] = ha_open_values
 
     df["ha_high"] = df[["high", "ha_open", "ha_close"]].max(axis=1)
     df["ha_low"] = df[["low", "ha_open", "ha_close"]].min(axis=1)
