@@ -1,18 +1,12 @@
 """Bot that trades on Oanda."""
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
 from time import sleep
 import v20  # type: ignore
 
-from bot.backtest import PerfTimer, Record, SignalConfig, backtest
-from bot.config import (
-    BACKTEST_COUNT,
-    ENTRY_COLUMN,
-    EXIT_COLUMN,
-    GRANULARITY,
-    WMA_PERIOD,
-)
+from bot.backtest import ChartConfig, PerfTimer, Record, SignalConfig
 from core.kernel import KernelConfig, kernel
 from bot.reporting import report
 from bot.exchange import (
@@ -27,23 +21,31 @@ logger = logging.getLogger("bot")
 APP_START_TIME = datetime.now()
 
 
+@dataclass
+class TradeConfig:
+    """Configuration for the bot."""
+
+    amount: float
+
+
 def bot_run(
-    ctx: OandaContext, signal_conf: SignalConfig, amount: float
+    ctx: OandaContext, signal_conf: SignalConfig, chart_conf: ChartConfig, amount: float
 ) -> tuple[int, Exception | None]:
     """Run the bot."""
     try:
         trade_id = get_open_trade(ctx)
-        df = getOandaOHLC(ctx, count=BACKTEST_COUNT, granularity=GRANULARITY)
+        df = getOandaOHLC(
+            ctx, count=chart_conf.candle_count, granularity=chart_conf.granularity
+        )
     except Exception as err:
         return -1, err
 
     kernel_conf = KernelConfig(
         signal_buy_column=signal_conf.signal_buy_column,
+        signal_exit_column=signal_conf.signal_exit_column,
         source_column=signal_conf.source_column,
-        entry_column=ENTRY_COLUMN,
-        exit_column=EXIT_COLUMN,
-        wma_period=WMA_PERIOD,
-        stop_loss=signal_conf.trailing_stop,
+        wma_period=chart_conf.wma_period,
+        stop_loss=signal_conf.stop_loss,
         take_profit=signal_conf.take_profit,
     )
     df = kernel(
@@ -78,16 +80,22 @@ def bot_run(
 
     if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
         close_order(ctx, trade_id)
-        report(df, signal_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+        report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
         assert trade_id == -1, "trades should not be open"
 
     # print the results
-    report(df, signal_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+    report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
 
     return trade_id, None
 
 
-def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
+def bot(
+    token: str,
+    account_id: str,
+    chart_conf: ChartConfig,
+    signal_conf: SignalConfig,
+    trade_conf: TradeConfig,
+) -> None:
     """Bot that trades on Oanda.
 
     This function trades on Oanda using the Oanda API. It places market orders based on the
@@ -99,42 +107,36 @@ def bot(token: str, account_id: str, instrument: str, amount: float) -> None:
         The Oanda API token.
     account_id : str
         The Oanda account ID.
-    instrument : str
-        The instrument to trade.
-    amount : float | None
-        The amount to trade. If None, the bot will calculate the amount based
-        on the current balance.
+    chart_conf : ChartConfig
+        The chart configuration.
+    signal_conf : SignalConfig
+        The signal configuration.
+    trade_conf : TradeConfig
+        The trade configuration.
 
     """
-    signal_conf = backtest(
-        instrument=instrument,
-        token=token,
-    )
-    if signal_conf is None:
-        logger.error("no signals found.")
-        return
-
     logger.info("starting bot.")
 
     ctx = OandaContext(
         ctx=v20.Context("api-fxpractice.oanda.com", token=token),
         account_id=account_id,
         token=token,
-        instrument=instrument,
+        instrument=chart_conf.instrument,
     )
 
     while True:
-        with PerfTimer(APP_START_TIME):
-            trade_id, err = bot_run(ctx, signal_conf, amount)
+        with PerfTimer(APP_START_TIME, logger):
+            trade_id, err = bot_run(
+                ctx, signal_conf, chart_conf=chart_conf, amount=trade_conf.amount
+            )
             if err is not None:
                 logger.error(err)
                 sleep(5)
                 continue
 
-            logger.info(f"columns used: {signal_conf}")
-            logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
-
-            sleep_until_next_5_minute(trade_id=trade_id)
+        logger.info(f"columns used: {signal_conf}")
+        logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
+        sleep_until_next_5_minute(trade_id=trade_id)
 
 
 def roundUp(dt):

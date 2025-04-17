@@ -5,13 +5,12 @@ from datetime import datetime
 import itertools
 import pandas as pd
 import v20  # type: ignore
+from alive_progress import alive_it  # type: ignore
 
-from bot.config import (
-    BACKTEST_COUNT,
-    ENTRY_COLUMN,
-    EXIT_COLUMN,
-    GRANULARITY,
-    WMA_PERIOD,
+from bot.constants import (
+    SOURCE_COLUMNS,
+    TP_MULTIPLIERS,
+    SL_MULTIPLIERS,
 )
 from core.kernel import KernelConfig, kernel
 from bot.exchange import (
@@ -26,42 +25,14 @@ from bot.reporting import report
 logger = logging.getLogger("backtest")
 APP_START_TIME = datetime.now()
 
-TP_MULTIPLIERS = [x / 2 for x in range(0, 7, 1)]
-TSL_MULTIPLIERS = [x / 2 for x in range(0, 3, 1)]
-SOURCE_COLUMNS = [
-    "open",
-    "high",
-    "low",
-    "close",
-    "bid_open",
-    "bid_low",
-    "bid_high",
-    "bid_close",
-    "ask_open",
-    "ask_low",
-    "ask_high",
-    "ask_close",
-    "ha_open",
-    "ha_low",
-    "ha_close",
-    "ha_high",
-    "ha_bid_open",
-    "ha_bid_low",
-    "ha_bid_close",
-    "ha_bid_high",
-    "ha_ask_open",
-    "ha_ask_low",
-    "ha_ask_close",
-    "ha_ask_high",
-]
-
 
 class PerfTimer:
     """PerfTimer class."""
 
-    def __init__(self, app_start_time: datetime):
+    def __init__(self, app_start_time: datetime, logger: logging.Logger):
         """Initialize a PerfTimer object."""
         self.app_start_time = app_start_time
+        self.logger = logger
         pass
 
     def __enter__(self):
@@ -72,9 +43,9 @@ class PerfTimer:
     def __exit__(self, exc_type, exc_value, traceback):
         """Stop the timer."""
         self.end = datetime.now()
-        logger.info(f"run interval: {self.end - self.start}")
-        logger.info("up time: %s", (self.end - self.app_start_time))
-        logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
+        self.logger.info(f"run interval: {self.end - self.start}")
+        self.logger.info("up time: %s", (self.end - self.app_start_time))
+        self.logger.info("last run time: %s", self.end.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 @dataclass
@@ -83,12 +54,13 @@ class SignalConfig:
 
     source_column: str
     signal_buy_column: str
-    trailing_stop: float
+    signal_exit_column: str
+    stop_loss: float
     take_profit: float
 
     def __str__(self):
         """Return a string representation of the SignalConfig object."""
-        return f"so:{self.source_column}, sib:{self.signal_buy_column}, ts:{self.trailing_stop}, tp:{self.take_profit}"
+        return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, sl:{self.stop_loss}, tp:{self.take_profit}"
 
 
 @dataclass
@@ -107,13 +79,23 @@ class Record:
         return f"w:{self.wins} l:{self.losses}, q:{round(self.exit_total, 5)}, q_min:{round(self.min_exit_total, 5)}"
 
 
-def backtest(instrument: str, token: str) -> SignalConfig | None:
+@dataclass
+class ChartConfig:
+    """ChartConfig class."""
+
+    instrument: str
+    granularity: str
+    wma_period: int
+    candle_count: int
+
+
+def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
     """Run a backtest of the trading strategy.
 
     Parameters
     ----------
-    instrument : str
-        The instrument to trade.
+    chart_config : ChartConfig
+        The chart configuration.
     token : str
         The Oanda API token.
 
@@ -127,61 +109,58 @@ def backtest(instrument: str, token: str) -> SignalConfig | None:
     logger.info("starting backtest")
     start_time = datetime.now()
     ctx = OandaContext(
-        v20.Context("api-fxpractice.oanda.com", token=token), None, token, instrument
+        v20.Context("api-fxpractice.oanda.com", token=token),
+        None,
+        token,
+        chart_config.instrument,
     )
 
-    orig_df = getOandaOHLC(ctx, count=BACKTEST_COUNT, granularity=GRANULARITY)
+    orig_df = getOandaOHLC(
+        ctx, count=chart_config.candle_count, granularity=chart_config.granularity
+    )
     logger.info(
         "count: %s granularity: %s wma_period: %s",
-        BACKTEST_COUNT,
-        GRANULARITY,
-        WMA_PERIOD,
+        chart_config.candle_count,
+        chart_config.granularity,
+        chart_config.wma_period,
     )
 
-    best_max_conf = SignalConfig("", "", 0.0, 0.0)
-    not_worst_conf = SignalConfig("", "", 0.0, 0.0)
+    best_max_conf = SignalConfig("", "", "", 0.0, 0.0)
+    not_worst_conf = SignalConfig("", "", "", 0.0, 0.0)
     best_df = pd.DataFrame()
     not_worst_df = pd.DataFrame()
     best_rec = Record(0, 0, 0, 0, -99.0, -99.0)
     not_worst_rec = Record(0, 0, 0, 0, -99.0, -99.0)
 
     column_pairs = itertools.product(
-        SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, TSL_MULTIPLIERS
+        SOURCE_COLUMNS, SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, SL_MULTIPLIERS
     )
     column_pair_len = (
         len(SOURCE_COLUMNS)
         * len(SOURCE_COLUMNS)
+        * len(SOURCE_COLUMNS)
         * len(TP_MULTIPLIERS)
-        * len(TSL_MULTIPLIERS)
+        * len(SL_MULTIPLIERS)
     )
     logger.info(f"total_combinations: {column_pair_len}")
-    count = -1
     total_found = 0
-    with PerfTimer(start_time):
+    with PerfTimer(start_time, logger):
         for (
             source_column_name,
             signal_buy_column_name,
+            signal_exit_column_name,
             take_profit_multiplier,
             stop_loss_multiplier,
-        ) in column_pairs:
-            count += 1
-            if count % 1000 == 0:
-                logger.debug(
-                    "heartbeat: %s found. %s%%",
-                    total_found,
-                    100 * round(count / column_pair_len, 3),
-                )
-
-            if stop_loss_multiplier >= take_profit_multiplier:
+        ) in alive_it(column_pairs, total=column_pair_len):
+            if stop_loss_multiplier > take_profit_multiplier:
                 continue
 
             kernel_conf = KernelConfig(
                 signal_buy_column=signal_buy_column_name,
+                signal_exit_column=signal_exit_column_name,
                 source_column=source_column_name,
-                wma_period=WMA_PERIOD,
+                wma_period=chart_config.wma_period,
                 take_profit=take_profit_multiplier,
-                entry_column=ENTRY_COLUMN,
-                exit_column=EXIT_COLUMN,
                 stop_loss=stop_loss_multiplier,
             )
             df = kernel(
@@ -193,6 +172,7 @@ def backtest(instrument: str, token: str) -> SignalConfig | None:
             signal_conf = SignalConfig(
                 source_column_name,
                 signal_buy_column_name,
+                signal_exit_column_name,
                 stop_loss_multiplier,
                 take_profit_multiplier,
             )
@@ -230,21 +210,26 @@ def backtest(instrument: str, token: str) -> SignalConfig | None:
                 best_rec = rec
                 best_max_conf = signal_conf
                 best_df = df.copy()
-    
+
     logger.debug(
         "best max found %s %s",
         best_max_conf,
         best_rec,
     )
-    report(best_df, best_max_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+    report(best_df, best_max_conf.signal_buy_column, best_max_conf.signal_exit_column)
 
     logger.debug(
         "not worst found %s %s",
         not_worst_conf,
         not_worst_rec,
     )
-    report(not_worst_df, not_worst_conf.signal_buy_column, ENTRY_COLUMN, EXIT_COLUMN)
+    report(
+        not_worst_df,
+        not_worst_conf.signal_buy_column,
+        not_worst_conf.signal_exit_column,
+    )
 
+    logger.info("total_found: %s", total_found)
     if total_found == 0:
         logger.error("no winning combinations found")
         return None

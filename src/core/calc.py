@@ -24,12 +24,12 @@ def exit_total(df: pd.DataFrame) -> None:
     is the cumulative total of the portfolio, including the current trade.
 
     """
-    df["exit_value"] = df["position_value"] * np.where(df["trigger"] == -1, 1, 0)
+    df["exit_value"] = df["position_value"] * ((df["trigger"] == -1).astype(int))
     df["exit_total"] = df["exit_value"].cumsum()
     df["running_total"] = df["exit_total"] + (df["position_value"] * df["signal"])
-    df["wins"] = np.where(df["exit_value"] > 0, 1, 0).cumsum()
-    df["losses"] = np.where(df["exit_value"] < 0, 1, 0).cumsum()
-    df["min_exit_total"] = df["exit_total"].cummin()
+    df["wins"] = (df["exit_value"] > 0).astype(int).cumsum()
+    df["losses"] = (df["exit_value"] < 0).astype(int).cumsum()
+    df["min_exit_total"] = df["exit_total"].expanding().min()
 
 
 def take_profit(
@@ -67,10 +67,10 @@ def take_profit(
     entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
 
-def trailing_stop_loss(
+def stop_loss(
     df: pd.DataFrame, stop_loss: float, entry_column: str, exit_column: str
 ) -> None:
-    """Apply a trailing stop loss strategy to the trading data.
+    """Apply a stop loss strategy to the trading data.
 
     Parameters
     ----------

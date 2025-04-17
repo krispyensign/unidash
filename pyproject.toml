@@ -10,6 +10,7 @@ dependencies = [
     "orjson",
     "v20",
     "pandas",
+    "pandas[performance]",
     "numpy",
     "ta-lib",
     "pyyaml",
@@ -29,6 +30,7 @@ dev = [
     "types-requests",
     "ruff",
     'pandas-stubs',
+    "types-PyYAML",
 ]
 
 [tool.ruff.lint]
