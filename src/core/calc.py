@@ -29,7 +29,7 @@ def exit_total(df: pd.DataFrame) -> None:
     df["running_total"] = df["exit_total"] + (df["position_value"] * df["signal"])
     df["wins"] = np.where(df["exit_value"] > 0, 1, 0).cumsum()
     df["losses"] = np.where(df["exit_value"] < 0, 1, 0).cumsum()
-    df["min_exit_total"] = df["exit_total"].cummin()
+    df["min_exit_total"] = df["exit_total"].expanding().min()
 
 
 def take_profit(

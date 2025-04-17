@@ -1,0 +1,15 @@
+trade_config:
+  amount: 1000
+
+chart_config:
+  instrument: USD_JPY
+  granularity: M5
+  wma_period: 20
+  candle_count: 288
+
+signal_config:
+  source_column: ha_ask_open
+  signal_buy_column: ha_open
+  signal_exit_column: bid_low
+  take_profit: 0.75
+  trailing_stop: 0.0

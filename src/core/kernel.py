@@ -7,11 +7,27 @@ from core.chart import heikin_ashi
 from core.calc import entry_price, exit_total, take_profit, atr, trailing_stop_loss
 import pandas as pd
 
+ENTRY_COLUMN = "ask_close"
+EXIT_COLUMN = "bid_close"
+
+
+@dataclass
+class KernelConfig:
+    """A dataclass containing the configuration for the kernel."""
+
+    signal_buy_column: str
+    signal_exit_column: str
+    source_column: str
+    wma_period: int = 20
+    take_profit: float = 0
+    stop_loss: float = 0
+
 
 def wma_signals(
     df: pd.DataFrame,
     source_column: str = "open",
     signal_buy_column: str = "bid_low",
+    signal_exit_column: str = "bid_high",
     wma_period: int = 20,
 ) -> None:
     """Generate trading signals based on a comparison of the Heikin-Ashi highs and lows to the wma.
@@ -26,6 +42,8 @@ def wma_signals(
         The column name for the source data.
     signal_buy_column : str, optional
         The column name for the buy signal data.
+    signal_exit_column : str, optional
+        The column name for the exit signal data.
     wma_period : int, optional
         The period for the weighted moving average, by default 20
 
@@ -54,18 +72,10 @@ def wma_signals(
     df.loc[df[signal_buy_column] > df["wma"], "signal"] = 1
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
-
-@dataclass
-class KernelConfig:
-    """A dataclass containing the configuration for the kernel."""
-
-    signal_buy_column: str
-    source_column: str
-    entry_column: str
-    exit_column: str
-    wma_period: int = 20
-    take_profit: float = 0
-    stop_loss: float = 0
+    if signal_buy_column != signal_exit_column:
+        # check if the exit column is less than the wma
+        df.loc[df[signal_exit_column] < df["wma"], "signal"] = 0
+        df["trigger"] = df["signal"].diff().fillna(0).astype(int)
 
 
 def kernel(
@@ -110,12 +120,13 @@ def kernel(
     wma_signals(
         df,
         signal_buy_column=config.signal_buy_column,
+        signal_exit_column=config.signal_exit_column,
         wma_period=config.wma_period,
         source_column=config.source_column,
     )
 
     # calculate the entry prices:
-    entry_price(df, entry_column=config.entry_column, exit_column=config.exit_column)
+    entry_price(df, entry_column=ENTRY_COLUMN, exit_column=EXIT_COLUMN)
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
@@ -123,16 +134,16 @@ def kernel(
         take_profit(
             df,
             config.take_profit,
-            entry_column=config.entry_column,
-            exit_column=config.exit_column,
+            entry_column=ENTRY_COLUMN,
+            exit_column=EXIT_COLUMN,
         )
 
     if config.stop_loss > 0:
         trailing_stop_loss(
             df,
             config.stop_loss,
-            entry_column=config.entry_column,
-            exit_column=config.exit_column,
+            entry_column=ENTRY_COLUMN,
+            exit_column=EXIT_COLUMN,
         )
 
     # calculate the exit total
