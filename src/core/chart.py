@@ -59,18 +59,22 @@ def heikin_ashi(df: pd.DataFrame) -> None:
         df["close"].to_numpy(),
     )
 
-    df["ha_bid_open"], df["ha_bid_high"], df["ha_bid_low"], df["ha_bid_close"] = heiken_ashi_numpy(
-        df["ask_open"].to_numpy(),
-        df["ask_high"].to_numpy(),
-        df["ask_low"].to_numpy(),
-        df["ask_close"].to_numpy(),
+    df["ha_bid_open"], df["ha_bid_high"], df["ha_bid_low"], df["ha_bid_close"] = (
+        heiken_ashi_numpy(
+            df["ask_open"].to_numpy(),
+            df["ask_high"].to_numpy(),
+            df["ask_low"].to_numpy(),
+            df["ask_close"].to_numpy(),
+        )
     )
 
-    df["ha_ask_open"], df["ha_ask_high"], df["ha_ask_low"], df["ha_ask_close"] = heiken_ashi_numpy(
-        df["bid_open"].to_numpy(),
-        df["bid_high"].to_numpy(),
-        df["bid_low"].to_numpy(),
-        df["bid_close"].to_numpy(),
+    df["ha_ask_open"], df["ha_ask_high"], df["ha_ask_low"], df["ha_ask_close"] = (
+        heiken_ashi_numpy(
+            df["bid_open"].to_numpy(),
+            df["bid_high"].to_numpy(),
+            df["bid_low"].to_numpy(),
+            df["bid_close"].to_numpy(),
+        )
     )
 
     df.set_index("timestamp", inplace=True)

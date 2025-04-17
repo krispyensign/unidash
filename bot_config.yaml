@@ -8,8 +8,8 @@ chart_config:
   candle_count: 76
 
 signal_config:
-  source_column: ha_open
-  signal_buy_column: ha_open
-  signal_exit_column: ha_bid_open
-  take_profit: 1.0
-  stop_loss: 0.5
+  source_column: ha_low
+  signal_buy_column: ha_bid_high
+  signal_exit_column: ha_bid_high
+  take_profit: 3.0
+  stop_loss: 0.0
