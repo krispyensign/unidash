@@ -19,6 +19,9 @@ from bot.exchange import (
 
 logger = logging.getLogger("bot")
 APP_START_TIME = datetime.now()
+FRIDAY = 5
+SUNDAY = 7
+FIVE_PM = 21
 
 
 @dataclass
@@ -41,11 +44,14 @@ def bot_run(
         return -1, last_time, err
     
     recent_last_time = df.index[-1]
-    if last_time == recent_last_time:
+    is_after_hours = (datetime.isoweekday == FRIDAY and datetime.now().hour >= FIVE_PM) or (
+        datetime.isoweekday == SUNDAY and datetime.now().hour < FIVE_PM)
+    if last_time == recent_last_time and not is_after_hours:
         logger.warning("bot_run: last_time == recent_last_time")
         sleep(1)
-        return trade_id, last_time, None
-        
+        return trade_id, recent_last_time, None
+    elif last_time == recent_last_time and is_after_hours:
+        logger.info("bot_run: last_time == recent_last_time and is_after_hours")
 
 
     kernel_conf = KernelConfig(
