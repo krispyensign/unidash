@@ -29,8 +29,8 @@ class TradeConfig:
 
 
 def bot_run(
-    ctx: OandaContext, signal_conf: SignalConfig, chart_conf: ChartConfig, amount: float
-) -> tuple[int, Exception | None]:
+    ctx: OandaContext, signal_conf: SignalConfig, chart_conf: ChartConfig, amount: float, last_time: datetime
+) -> tuple[int, datetime, Exception | None]:
     """Run the bot."""
     try:
         trade_id = get_open_trade(ctx)
@@ -38,7 +38,15 @@ def bot_run(
             ctx, count=chart_conf.candle_count, granularity=chart_conf.granularity
         )
     except Exception as err:
-        return -1, err
+        return -1, last_time, err
+    
+    recent_last_time = df.index[-1]
+    if last_time == recent_last_time:
+        logger.warning("bot_run: last_time == recent_last_time")
+        sleep(1)
+        return trade_id, last_time, None
+        
+
 
     kernel_conf = KernelConfig(
         signal_buy_column=signal_conf.signal_buy_column,
@@ -70,23 +78,22 @@ def bot_run(
             )
 
         except Exception as err:
-            return -1, err
+            return -1, recent_last_time, err
 
     if rec.trigger == -1 and trade_id != -1:
         try:
             close_order(ctx, trade_id)
         except Exception as err:
-            return trade_id, err
+            return trade_id, recent_last_time, err
 
     if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
         close_order(ctx, trade_id)
         report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
-        assert trade_id == -1, "trades should not be open"
 
     # print the results
     report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
 
-    return trade_id, None
+    return trade_id, recent_last_time, None
 
 
 def bot(
@@ -124,10 +131,11 @@ def bot(
         instrument=chart_conf.instrument,
     )
 
+    last_time = datetime.now()
     while True:
         with PerfTimer(APP_START_TIME, logger):
-            trade_id, err = bot_run(
-                ctx, signal_conf, chart_conf=chart_conf, amount=trade_conf.amount
+            trade_id, last_time, err = bot_run(
+                ctx, signal_conf, chart_conf=chart_conf, amount=trade_conf.amount, last_time=last_time,
             )
             if err is not None:
                 logger.error(err)
