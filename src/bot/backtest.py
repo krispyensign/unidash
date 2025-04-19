@@ -201,28 +201,29 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
                     best_max_conf = signal_conf
                     best_df = df.copy()
 
-    logger.debug(
-        "best max found %s %s",
-        best_max_conf,
-        best_rec,
-    )
-    report(best_df, best_max_conf.signal_buy_column, best_max_conf.signal_exit_column)
-
-    logger.debug(
-        "not worst found %s %s",
-        not_worst_conf,
-        not_worst_rec,
-    )
-    report(
-        not_worst_df,
-        not_worst_conf.signal_buy_column,
-        not_worst_conf.signal_exit_column,
-    )
-
     logger.info("found: %s misses: %s", total_found, misses)
     if total_found == 0:
         logger.error("no winning combinations found")
         return None
+    else:
+        logger.debug(
+            "best max found %s %s",
+            best_max_conf,
+            best_rec,
+        )
+        report(best_df, best_max_conf.signal_buy_column, best_max_conf.signal_exit_column)
+
+        logger.debug(
+            "not worst found %s %s",
+            not_worst_conf,
+            not_worst_rec,
+        )
+        report(
+            not_worst_df,
+            not_worst_conf.signal_buy_column,
+            not_worst_conf.signal_exit_column,
+        )
+
 
     # choose the least worst combination to minimize loss
     if (not_worst_rec.wins - not_worst_rec.losses) > (best_rec.wins - best_rec.losses):
