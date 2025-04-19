@@ -62,7 +62,7 @@ def take_profit(
 
     """
     df["take_profit"] = df["atr"] * take_profit
-    df.loc[df["position_value"] > df["take_profit"], "signal"] = 0
+    df.loc[(df["position_value"] > df["take_profit"]) & (df["trigger"] != 1), "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
     entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
@@ -97,7 +97,7 @@ def stop_loss(
 
     """
     df["stop_loss"] = df["atr"] * stop_loss
-    df.loc[df["position_value"] < df["stop_loss"], "signal"] = 0
+    df.loc[(df["position_value"] < df["stop_loss"]) & (df["trigger"] != 1), "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
     entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
