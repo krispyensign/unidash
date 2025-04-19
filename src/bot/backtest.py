@@ -108,7 +108,6 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
 
     """
     logger.info("starting backtest")
-    start_time = datetime.now()
     ctx = OandaContext(
         v20.Context("api-fxpractice.oanda.com", token=token),
         None,
@@ -147,7 +146,7 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
     total_found = 0
     misses = 0
     # count = 0
-    with PerfTimer(start_time, logger):
+    with PerfTimer(APP_START_TIME, logger):
         for (
             source_column_name,
             signal_buy_column_name,
@@ -232,4 +231,3 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
 
     logger.info("best max selected")
     return best_max_conf
-

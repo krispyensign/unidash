@@ -29,8 +29,12 @@ class TradeConfig:
 
 
 def bot_run(
-    ctx: OandaContext, signal_conf: KernelConfig, chart_conf: ChartConfig, amount: float
-) -> tuple[int, Exception | None]:
+    ctx: OandaContext,
+    signal_conf: KernelConfig,
+    chart_conf: ChartConfig,
+    amount: float,
+    last_time: datetime,
+) -> tuple[int, datetime, Exception | None]:
     """Run the bot."""
     try:
         trade_id = get_open_trade(ctx)
@@ -38,8 +42,14 @@ def bot_run(
             ctx, count=chart_conf.candle_count, granularity=chart_conf.granularity
         )
     except Exception as err:
-        return -1, err
+        return -1, last_time, err
 
+    if df.index[-1] == last_time:
+        logger.warning("time has not incremented. trying again.")
+        sleep(1)
+        return trade_id, last_time, None
+
+    last_time = df.index[-1]
     signal_conf.wma_period = chart_conf.wma_period
     df = kernel(
         df,
@@ -55,13 +65,13 @@ def bot_run(
             )
 
         except Exception as err:
-            return -1, err
+            return -1, last_time, err
 
     if rec.trigger == -1 and trade_id != -1:
         try:
             close_order(ctx, trade_id)
         except Exception as err:
-            return trade_id, err
+            return trade_id, last_time, err
 
     if rec.trigger == 0 and rec.signal == 0 and trade_id != -1:
         close_order(ctx, trade_id)
@@ -71,8 +81,10 @@ def bot_run(
     # print the results
     report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
     logger.info("%s %s", rec, signal_conf)
+    logger.info(f"columns used: {signal_conf}")
+    logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
 
-    return trade_id, None
+    return trade_id, last_time, None
 
 
 def bot(
@@ -112,16 +124,19 @@ def bot(
 
     while True:
         with PerfTimer(APP_START_TIME, logger):
-            trade_id, err = bot_run(
-                ctx, signal_conf, chart_conf=chart_conf, amount=trade_conf.amount
+            last_time: datetime = datetime.now()
+            trade_id, last_time, err = bot_run(
+                ctx,
+                signal_conf,
+                last_time=last_time,
+                chart_conf=chart_conf,
+                amount=trade_conf.amount,
             )
             if err is not None:
                 logger.error(err)
                 sleep(5)
                 continue
 
-        logger.info(f"columns used: {signal_conf}")
-        logger.info(f"trade id: {trade_id}") if trade_id == -1 else None
         sleep_until_next_5_minute(trade_id=trade_id)
 
 

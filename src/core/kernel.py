@@ -6,7 +6,7 @@ import talib
 import pandas as pd
 
 from core.chart import heikin_ashi
-from core.calc import entry_price, exit_total, take_profit, atr, stop_loss as sl
+from core.calc import entry_price, exit_total, take_profit, atr, trailing_stop_loss
 
 ENTRY_COLUMN = "ask_close"
 EXIT_COLUMN = "bid_close"
@@ -26,6 +26,7 @@ class KernelConfig:
     def __str__(self):
         """Return a string representation of the SignalConfig object."""
         return f"so:{self.source_column}, sib:{self.signal_buy_column}, sie:{self.signal_exit_column}, sl:{self.stop_loss}, tp:{self.take_profit}"
+
 
 def wma_signals(
     df: pd.DataFrame,
@@ -129,7 +130,6 @@ def kernel(
         df[ENTRY_COLUMN].to_numpy(),
         df[EXIT_COLUMN].to_numpy(),
     )
-    
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
@@ -142,7 +142,7 @@ def kernel(
         )
 
     if config.stop_loss > 0:
-        sl(
+        trailing_stop_loss(
             df,
             config.stop_loss,
             entry_column=ENTRY_COLUMN,

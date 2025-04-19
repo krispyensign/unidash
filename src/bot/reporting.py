@@ -55,13 +55,7 @@ def report(
     df_orders = df_orders[df_orders["trigger"] != 0]
     logger.info("recent trades")
     logger.info(
-        "\n"
-        + df_orders.tail(12)
-        .round(4)
-        .to_string(header=True, justify="left")
+        "\n" + df_orders.tail(12).round(4).to_string(header=True, justify="left")
     )
     logger.info("current status")
-    logger.info(
-        "\n"
-        + df_ticks.tail(6).round(4).to_string(header=True, justify="left")
-    )
+    logger.info("\n" + df_ticks.tail(6).round(4).to_string(header=True, justify="left"))

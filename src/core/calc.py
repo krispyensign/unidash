@@ -13,7 +13,14 @@ def exit_total(
     position_value: NDArray[np.float64],
     trigger: NDArray[np.uint8],
     signal: NDArray[np.uint8],
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.uint8], NDArray[np.uint8], NDArray[np.float64]]:
+) -> tuple[
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.uint8],
+    NDArray[np.uint8],
+    NDArray[np.float64],
+]:
     """Calculate the cumulative total of all trades and the running total of the portfolio.
 
     Parameters
@@ -39,7 +46,7 @@ def exit_total(
     exit_value: NDArray[np.float64] = position_value * (np.where(trigger == -1, 1, 0))
     exit_total: NDArray[np.float64] = exit_value.cumsum()
     running_total: NDArray[np.float64] = exit_total + (position_value * signal)
-    wins: NDArray[np.uint8] = np.where(exit_value > 0, 1, 0).cumsum()    
+    wins: NDArray[np.uint8] = np.where(exit_value > 0, 1, 0).cumsum()
     losses: NDArray[np.uint8] = np.where(exit_value < 0, 1, 0).cumsum()
     min_exit_total = exit_total.min()
 
@@ -76,7 +83,9 @@ def take_profit(
 
     """
     df["take_profit"] = df["atr"] * take_profit
-    df.loc[(df["position_value"] > df["take_profit"]) & (df["trigger"] != 1), "signal"] = 0
+    df.loc[
+        (df["position_value"] > df["take_profit"]) & (df["trigger"] != 1), "signal"
+    ] = 0
     df["trigger"], df["entry_price"], df["position_value"] = entry_price(
         df["signal"].to_numpy(dtype=np.int8),
         df[entry_column].to_numpy(),
@@ -85,7 +94,7 @@ def take_profit(
 
 
 def stop_loss(
-    df: pd.DataFrame, stop_loss: float, entry_column: str, exit_column: str
+    df: pd.DataFrame, stop_loss_value: float, entry_column: str, exit_column: str
 ) -> None:
     """Apply a stop loss strategy to the trading data.
 
@@ -93,7 +102,7 @@ def stop_loss(
     ----------
     df : pd.DataFrame
         The DataFrame containing the trading data.
-    stop_loss : float
+    stop_loss_value : float
         The stop loss value as a multiplier of the atr.
     entry_column : str
         The column name for the entry price.
@@ -113,8 +122,58 @@ def stop_loss(
     is then re-calculated.
 
     """
-    df["stop_loss"] = df["atr"] * stop_loss
-    df.loc[(df["position_value"] < df["stop_loss"]) & (df["trigger"] != 1), "signal"] = 0
+    df["stop_loss"] = df["atr"] * stop_loss_value
+    df.loc[
+        (df["position_value"] < df["stop_loss"]) & (df["trigger"] != 1), "signal"
+    ] = 0
+    df["trigger"], df["entry_price"], df["position_value"] = entry_price(
+        df["signal"].to_numpy(dtype=np.int8),
+        df[entry_column].to_numpy(),
+        df[exit_column].to_numpy(),
+    )
+
+
+def trailing_stop_loss(
+    df: pd.DataFrame,
+    trailing_stop_loss_value: float,
+    entry_column: str,
+    exit_column: str,
+) -> None:
+    """Apply a trailing stop loss to the DataFrame.
+
+    This function applies a trailing stop loss to the DataFrame based on the 'signal' column.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the trading data.
+    trailing_stop_loss_value : float
+        The trailing stop loss value as a multiplier of the atr.
+    entry_column : str
+        The column name for the entry price.
+    exit_column : str
+        The column name for the exit price.
+
+    Returns
+    -------
+    pd.DataFrame
+        The DataFrame with the 'trailing_stop_loss' column added.
+
+    """
+    # set the trailing stop loss
+    df["trailing_stop_loss"] = (
+        df[df["signal"] == 1]
+        .groupby((df["signal"] == 1).cumsum())["bid_high"]
+        .transform(lambda x: x.rolling(window=len(x)).max())
+        - df["atr"] * trailing_stop_loss_value
+    )
+
+    # set the signal to 0 if the trailing stop loss is less than the bid close
+    df.loc[
+        (df["bid_close"] < df["trailing_stop_loss"]) & (df["trigger"] != 1),
+        "signal",
+    ] = 0
+
     df["trigger"], df["entry_price"], df["position_value"] = entry_price(
         df["signal"].to_numpy(dtype=np.int8),
         df[entry_column].to_numpy(),
@@ -150,9 +209,7 @@ def entry_price(
     price: NDArray[np.float64] = np.where(trigger == 1, entry_column, np.nan)
     price = ffill(price) * internal_bit_mask
     price = np.where(np.isnan(price), 0, price)
-    position_value: NDArray[np.float64] = (
-        exit_column - price
-    ) * internal_bit_mask
+    position_value: NDArray[np.float64] = (exit_column - price) * internal_bit_mask
 
     return trigger, price, position_value
 
