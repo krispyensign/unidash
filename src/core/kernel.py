@@ -89,8 +89,6 @@ def kernel(
     This function processes a DataFrame containing trading data and generate trading signals
     using candlesticks and weighted moving average (wma).
 
-    TODO: support other pipelines
-
     Parameters
     ----------
     df : pd.DataFrame
@@ -106,7 +104,7 @@ def kernel(
         A DataFrame containing the processed trading data.
 
     """
-    df = df.iloc[:-1].copy()
+    df = df.copy().iloc[:-1]
 
     # calculate the ATR for the trailing stop loss
     heikin_ashi(df)
@@ -131,9 +129,6 @@ def kernel(
         df[ENTRY_COLUMN].to_numpy(),
         df[EXIT_COLUMN].to_numpy(),
     )
-    # assert df["trigger"].isna().sum() == 0, f"trigger nan count {df['trigger'].isna().sum()}"
-    # assert df["entry_price"].isna().sum() == 0, f"entry_price value is NaN {df['entry_price'].isna().sum()}"
-    # assert df["position_value"].isna().sum() == 0, "Position value is NaN"
     
 
     # recalculate the entry prices after a take profit

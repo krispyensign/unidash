@@ -70,6 +70,7 @@ def bot_run(
 
     # print the results
     report(df, signal_conf.signal_buy_column, signal_conf.signal_exit_column)
+    logger.info("%s %s", rec, signal_conf)
 
     return trade_id, None
 

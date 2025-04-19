@@ -155,9 +155,6 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
             take_profit_multiplier,
             stop_loss_multiplier,
         ) in alive_it(column_pairs, total=column_pair_len):
-            # count += 1
-            # if count % 1000 == 0:
-            #     logger.info("progress: %d%%", round(100 * (count / column_pair_len), 4))
             if stop_loss_multiplier > take_profit_multiplier:
                 continue
 
@@ -176,7 +173,7 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
 
             rec = Record(df)
 
-            if rec.losses >= rec.wins:
+            if rec.losses > rec.wins or rec.wins == 0:
                 misses += 1
                 continue
             else:
@@ -194,15 +191,16 @@ def backtest(chart_config: ChartConfig, token: str) -> KernelConfig | None:
                 not_worst_df = df.copy()
 
             if rec.exit_total > best_rec.exit_total:
-                logger.info("found: %s misses: %s", total_found, misses)
-                logger.debug(
-                    "new max found %s %s",
-                    rec,
-                    signal_conf,
-                )
-                best_rec = rec
-                best_max_conf = signal_conf
-                best_df = df.copy()
+                if rec.min_exit_total >= best_rec.min_exit_total:
+                    logger.info("found: %s misses: %s", total_found, misses)
+                    logger.debug(
+                        "new max found %s %s",
+                        rec,
+                        signal_conf,
+                    )
+                    best_rec = rec
+                    best_max_conf = signal_conf
+                    best_df = df.copy()
 
     logger.debug(
         "best max found %s %s",

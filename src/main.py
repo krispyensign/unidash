@@ -22,7 +22,9 @@ def get_logger(file_name: str):
         format="%(asctime)s|%(levelname)s|%(name)s|%(message)s",
         handlers=[logging.FileHandler(file_name), logging.StreamHandler()],
     )
-    logger = logging.getLogger("main")
+    logger = logging.getLogger()
+    numba_logger = logging.getLogger('numba')
+    numba_logger.setLevel(logging.WARNING)
     return logger
 
 
