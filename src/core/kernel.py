@@ -137,6 +137,7 @@ def kernel(
             entry_column=ENTRY_COLUMN,
             exit_column=EXIT_COLUMN,
         )
+        entry_price(df, entry_column=ENTRY_COLUMN, exit_column=EXIT_COLUMN)
 
     if config.stop_loss > 0:
         sl(
@@ -145,6 +146,7 @@ def kernel(
             entry_column=ENTRY_COLUMN,
             exit_column=EXIT_COLUMN,
         )
+        entry_price(df, entry_column=ENTRY_COLUMN, exit_column=EXIT_COLUMN)
 
     # calculate the exit total
     exit_total(df)
