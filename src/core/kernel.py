@@ -5,7 +5,13 @@ import talib
 import pandas as pd
 
 from core.chart import heikin_ashi
-from core.calc import entry_price, exit_total, take_profit, atr, stop_loss as sl
+from core.calc import (
+    entry_price,
+    exit_total,
+    take_profit,
+    atr,
+    stop_loss as sl,
+)
 
 
 @dataclass

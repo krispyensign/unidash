@@ -9,8 +9,8 @@ from alive_progress import alive_it  # type: ignore
 
 from bot.constants import (
     SOURCE_COLUMNS,
-    TP_MULTIPLIERS,
-    SL_MULTIPLIERS,
+    TP,
+    SL,
 )
 from core.kernel import KernelConfig, kernel
 from bot.exchange import (
@@ -133,14 +133,14 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
     not_worst_rec = Record(0, 0, 0, 0, -99.0, -99.0)
 
     column_pairs = itertools.product(
-        SOURCE_COLUMNS, SOURCE_COLUMNS, SOURCE_COLUMNS, TP_MULTIPLIERS, SL_MULTIPLIERS
+        SOURCE_COLUMNS, SOURCE_COLUMNS, SOURCE_COLUMNS, TP, SL
     )
     column_pair_len = (
         len(SOURCE_COLUMNS)
         * len(SOURCE_COLUMNS)
         * len(SOURCE_COLUMNS)
-        * len(TP_MULTIPLIERS)
-        * len(SL_MULTIPLIERS)
+        * len(TP)
+        * len(SL)
     )
     logger.info(f"total_combinations: {column_pair_len}")
     total_found = 0
