@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 import talib
 
+ASK_COLUMN = "ask_close"
+BID_COLUMN = "bid_close"
+
 
 def exit_total(df: pd.DataFrame) -> None:
     """Calculate the cumulative total of all trades and the running total of the portfolio.
@@ -32,9 +35,7 @@ def exit_total(df: pd.DataFrame) -> None:
     df["min_exit_total"] = df["exit_total"].expanding().min()
 
 
-def take_profit(
-    df: pd.DataFrame, take_profit: float, entry_column: str, exit_column: str
-) -> None:
+def take_profit(df: pd.DataFrame, take_profit: float) -> None:
     """Apply a take profit strategy to the trading data.
 
     Parameters
@@ -61,15 +62,14 @@ def take_profit(
     is then re-calculated.
 
     """
-    df["take_profit"] = df["atr"] * take_profit
-    df.loc[df["position_value"] > df["take_profit"], "signal"] = 0
+    df["take_profit"] = take_profit
+    df.loc[
+        (df["position_value"] > df["take_profit"]) & (df["trigger"] != 1), "signal"
+    ] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-    entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
 
-def stop_loss(
-    df: pd.DataFrame, stop_loss: float, entry_column: str, exit_column: str
-) -> None:
+def stop_loss(df: pd.DataFrame, stop_loss: float) -> None:
     """Apply a stop loss strategy to the trading data.
 
     Parameters
@@ -96,13 +96,12 @@ def stop_loss(
     is then re-calculated.
 
     """
-    df["stop_loss"] = df["atr"] * stop_loss
+    df["stop_loss"] = stop_loss
     df.loc[df["position_value"] < df["stop_loss"], "signal"] = 0
     df["trigger"] = df["signal"].diff().fillna(0).astype(int)
-    entry_price(df, entry_column=entry_column, exit_column=exit_column)
 
 
-def entry_price(df: pd.DataFrame, entry_column: str, exit_column: str) -> None:
+def entry_price(df: pd.DataFrame) -> None:
     """Calculate the entry price for a given trading signal.
 
     When the trigger is 1, use the ask_open price (buy signal), so when the trigger is -1, it means
@@ -133,9 +132,9 @@ def entry_price(df: pd.DataFrame, entry_column: str, exit_column: str) -> None:
 
     """
     df["internal_bit_mask"] = df["signal"] | abs(df["trigger"])
-    df["entry_price"] = np.where(df["trigger"] == 1, df[entry_column], np.nan)
+    df["entry_price"] = np.where(df["trigger"] == 1, df[ASK_COLUMN], np.nan)
     df["entry_price"] = df["entry_price"].ffill() * df["internal_bit_mask"]
-    df["position_value"] = (df[exit_column] - df["entry_price"]) * df[
+    df["position_value"] = (df[BID_COLUMN] - df["entry_price"]) * df[
         "internal_bit_mask"
     ]
 

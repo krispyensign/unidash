@@ -5,10 +5,13 @@ import talib
 import pandas as pd
 
 from core.chart import heikin_ashi
-from core.calc import entry_price, exit_total, take_profit, atr, stop_loss as sl
-
-ENTRY_COLUMN = "ask_close"
-EXIT_COLUMN = "bid_close"
+from core.calc import (
+    entry_price,
+    exit_total,
+    take_profit,
+    # atr,
+    stop_loss as sl,
+)
 
 
 @dataclass
@@ -110,7 +113,7 @@ def kernel(
 
     # calculate the ATR for the trailing stop loss
     heikin_ashi(df)
-    atr(df, config.wma_period)
+    # atr(df, config.wma_period)
 
     # signal using the close prices
     # signal and trigger interval could appears as this:
@@ -126,7 +129,7 @@ def kernel(
     )
 
     # calculate the entry prices:
-    entry_price(df, entry_column=ENTRY_COLUMN, exit_column=EXIT_COLUMN)
+    entry_price(df)
 
     # recalculate the entry prices after a take profit
     # for internally managed take profits
@@ -134,17 +137,15 @@ def kernel(
         take_profit(
             df,
             config.take_profit,
-            entry_column=ENTRY_COLUMN,
-            exit_column=EXIT_COLUMN,
         )
+        entry_price(df)
 
     if config.stop_loss > 0:
         sl(
             df,
             config.stop_loss,
-            entry_column=ENTRY_COLUMN,
-            exit_column=EXIT_COLUMN,
         )
+        entry_price(df)
 
     # calculate the exit total
     exit_total(df)

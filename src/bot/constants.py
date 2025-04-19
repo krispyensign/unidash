@@ -1,7 +1,7 @@
 """Configuration variables."""
 
-TP_MULTIPLIERS = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
-SL_MULTIPLIERS = [0.0, 0.5, 1.0]
+TP = [0.0, 0.05, 0.1, 0.15, 0.2]
+SL = [0.0, 0.05, 0.1, 0.15, 0.2]
 
 SOURCE_COLUMNS = [
     "ha_open",

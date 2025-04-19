@@ -19,6 +19,8 @@ def get_logger(file_name: str):
         handlers=[logging.FileHandler(file_name), logging.StreamHandler()],
     )
     logger = logging.getLogger("main")
+    numba_logger = logging.getLogger("numba")
+    numba_logger.setLevel(logging.WARNING)
     return logger
 
 
