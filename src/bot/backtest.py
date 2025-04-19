@@ -186,7 +186,7 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
                 min_exit_total=df["min_exit_total"].iloc[-1],
             )
 
-            if rec.losses >= rec.wins:
+            if rec.losses - 1 > rec.wins:
                 continue
             else:
                 total_found += 1
@@ -211,6 +211,11 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
                 best_max_conf = signal_conf
                 best_df = df.copy()
 
+    logger.info("total_found: %s", total_found)
+    if total_found == 0:
+        logger.error("no winning combinations found")
+        return None
+
     logger.debug(
         "best max found %s %s",
         best_max_conf,
@@ -228,11 +233,6 @@ def backtest(chart_config: ChartConfig, token: str) -> SignalConfig | None:
         not_worst_conf.signal_buy_column,
         not_worst_conf.signal_exit_column,
     )
-
-    logger.info("total_found: %s", total_found)
-    if total_found == 0:
-        logger.error("no winning combinations found")
-        return None
 
     # choose the least worst combination to minimize loss
     if (not_worst_rec.wins - not_worst_rec.losses) > (best_rec.wins - best_rec.losses):
