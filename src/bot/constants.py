@@ -1,6 +1,6 @@
 """Configuration variables."""
 
-TP_MULTIPLIERS = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]
+TP_MULTIPLIERS = [0.0, 0.5, 1.0, 1.5, 2.0]
 SL_MULTIPLIERS = [0.0, 0.5, 1.0]
 
 SOURCE_COLUMNS = [
@@ -16,16 +16,16 @@ SOURCE_COLUMNS = [
     "ha_ask_low",
     "ha_ask_close",
     "ha_ask_high",
-    "open",
-    "high",
-    "low",
-    "close",
-    "bid_open",
-    "bid_low",
-    "bid_high",
-    "bid_close",
-    "ask_open",
-    "ask_low",
-    "ask_high",
-    "ask_close",
+    # "open",
+    # "high",
+    # "low",
+    # "close",
+    # "bid_open",
+    # "bid_low",
+    # "bid_high",
+    # "bid_close",
+    # "ask_open",
+    # "ask_low",
+    # "ask_high",
+    # "ask_close",
 ]
